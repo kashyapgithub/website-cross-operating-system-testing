@@ -1,85 +1,107 @@
 // ---------------------------------------------------------------------------
 // popup.js
 //
-// Thin UI layer only. All GitHub API calls live in background.js — the popup
-// just asks the background worker to "run a test" and "check on a run",
-// then renders whatever comes back. Keeping API logic out of the popup means
-// a long-running poll survives the popup being closed and reopened.
+// Thin UI layer only — all GitHub API work lives in background.js. Opens a
+// long-lived port and updates each bench slot as COMBO_READY messages
+// stream in, so each OS's status updates independently.
 // ---------------------------------------------------------------------------
 
 const currentUrlEl = document.getElementById("current-url");
 const runBtn = document.getElementById("run-btn");
 const statusLine = document.getElementById("status-line");
-const resultsGrid = document.getElementById("results-grid");
 const settingsBtn = document.getElementById("settings-btn");
 
-/** Reads the URL of the tab the popup was opened from. */
+const slotByLabel = {
+  "Windows · Chrome": document.querySelector('[data-combo="windows"]'),
+  "macOS · Chrome": document.querySelector('[data-combo="macos"]'),
+  "Linux · Chrome": document.querySelector('[data-combo="linux"]'),
+};
+
 const getActiveTabUrl = async () => {
   const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return activeTab?.url ?? "";
 };
 
-/** Renders a single status line, replacing whatever was there before. */
-const setStatus = (message) => {
+const setStatus = (message, tone = "normal") => {
   statusLine.textContent = message;
+  statusLine.dataset.tone = tone;
 };
 
-/**
- * Renders the screenshot grid from a list of { label, imageUrl } results.
- * @param {{ label: string, imageUrl: string }[]} results
- */
-const renderResults = (results) => {
-  resultsGrid.innerHTML = "";
+const setSlotState = (slot, state, label) => {
+  const stateEl = slot.querySelector(".bench__state");
+  stateEl.dataset.state = state;
+  stateEl.textContent = label;
+  slot.dataset.active = state === "running";
+};
 
-  results.forEach(({ label, imageUrl }) => {
-    const item = document.createElement("div");
-    item.className = "results-grid__item";
-
-    const img = document.createElement("img");
-    img.src = imageUrl;
-    img.alt = `Screenshot: ${label}`;
-
-    const caption = document.createElement("p");
-    caption.className = "results-grid__label";
-    caption.textContent = label;
-
-    item.append(img, caption);
-    resultsGrid.append(item);
+const resetBench = () => {
+  Object.values(slotByLabel).forEach((slot) => {
+    setSlotState(slot, "queued", "Queued");
+    const thumb = slot.querySelector(".bench__thumb");
+    thumb.hidden = true;
+    thumb.removeAttribute("data-expanded");
   });
 };
 
-/** Kicks off a run and polls until screenshots are ready or it fails. */
+const toggleExpand = (thumb) => {
+  const isExpanded = thumb.dataset.expanded === "true";
+  thumb.dataset.expanded = String(!isExpanded);
+};
+
+const markSlotDone = (label, imageUrl) => {
+  const slot = slotByLabel[label];
+  if (!slot) return;
+
+  setSlotState(slot, "done", "Done");
+
+  const thumb = slot.querySelector(".bench__thumb");
+  thumb.src = imageUrl;
+  thumb.hidden = false;
+  thumb.onclick = () => toggleExpand(thumb);
+};
+
 const handleRunClick = async () => {
   runBtn.disabled = true;
-  resultsGrid.innerHTML = "";
-  setStatus("Checking GitHub credentials…");
+  resetBench();
+  setStatus("Starting run…");
 
   const targetUrl = await getActiveTabUrl();
+  const port = chrome.runtime.connect({ name: "cross-os-test" });
 
-  const response = await chrome.runtime.sendMessage({
-    type: "RUN_CROSS_OS_TEST",
-    targetUrl,
+  port.onMessage.addListener((message) => {
+    if (message.type === "TRIGGERED") {
+      setStatus("Workflow triggered — waiting for runners to spin up…");
+      Object.values(slotByLabel).forEach((slot) => setSlotState(slot, "running", "Running…"));
+      return;
+    }
+
+    if (message.type === "COMBO_READY") {
+      markSlotDone(message.label, message.imageUrl);
+      return;
+    }
+
+    if (message.type === "RUN_FINISHED") {
+      setStatus(message.timedOut ? "Some OSes timed out — check the Actions tab." : "All done ✓");
+      runBtn.disabled = false;
+      port.disconnect();
+      return;
+    }
+
+    if (message.type === "ERROR") {
+      if (message.error === "MISSING_CREDENTIALS") {
+        setStatus("No GitHub token saved yet — opening setup…", "error");
+        chrome.runtime.openOptionsPage();
+      } else {
+        setStatus(`Failed: ${message.error}`, "error");
+      }
+      runBtn.disabled = false;
+      port.disconnect();
+    }
   });
 
-  if (response.error === "MISSING_CREDENTIALS") {
-    setStatus("No GitHub token saved yet — opening setup…");
-    chrome.runtime.openOptionsPage();
-    runBtn.disabled = false;
-    return;
-  }
-
-  if (response.error) {
-    setStatus(`Failed: ${response.error}`);
-    runBtn.disabled = false;
-    return;
-  }
-
-  setStatus("Done ✓");
-  renderResults(response.results);
-  runBtn.disabled = false;
+  port.postMessage({ type: "START", targetUrl });
 };
 
-/** Wires up event listeners once the popup DOM is ready. */
 const init = async () => {
   currentUrlEl.textContent = await getActiveTabUrl();
   runBtn.addEventListener("click", handleRunClick);

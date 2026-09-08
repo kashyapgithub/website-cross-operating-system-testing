@@ -52,28 +52,30 @@ jobs:
           OS_NAME: ${{ runner.os == 'Windows' && 'windows' || runner.os == 'macOS' && 'macos' || 'linux' }}
           OUTPUT_PATH: screenshot-output.png
 
+      - name: Checkout results branch
+        uses: actions/checkout@v4
+        with:
+          ref: results
+          path: results-branch
+          fetch-depth: 0
+
       - name: Commit screenshot to results branch
         shell: bash
         run: |
           OS_LABEL="${{ runner.os == 'Windows' && 'windows' || runner.os == 'macOS' && 'macos' || 'linux' }}"
           RUN_TAG="${{ github.event.client_payload.run_tag }}"
-          DEST_DIR="results/${RUN_TAG}"
+          DEST_DIR="results-branch/results/${RUN_TAG}"
           DEST_FILE="${DEST_DIR}/${OS_LABEL}-chromium.png"
-
-          git fetch origin results || true
-          git checkout results 2>/dev/null || git checkout --orphan results
-          git reset --hard origin/results 2>/dev/null || true
 
           mkdir -p "${DEST_DIR}"
           cp screenshot-output.png "${DEST_FILE}"
 
+          cd results-branch
           git config user.name "cross-os-tester-bot"
           git config user.email "actions@github.com"
-          git add "${DEST_FILE}"
+          git add "results/${RUN_TAG}/${OS_LABEL}-chromium.png"
           git commit -m "Add ${OS_LABEL} screenshot for ${RUN_TAG}"
 
-          # Retry the push in case two OS jobs finish at the same instant
-          # and race on the results branch.
           for attempt in 1 2 3 4 5; do
             git pull --rebase origin results && git push origin results && break
             sleep 5

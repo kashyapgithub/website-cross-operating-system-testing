@@ -30,7 +30,13 @@ const captureScreenshot = async () => {
   const page = await browser.newPage({ viewport: VIEWPORT });
 
   try {
-    await page.goto(TARGET_URL, { waitUntil: "networkidle" });
+    // "networkidle" is deliberately avoided here: many real sites
+    // (analytics beacons, websockets, ad pixels) never go network-idle, so
+    // waiting on it throws a timeout instead of capturing anything. "load"
+    // is the reliable baseline; the networkidle wait afterward is a
+    // best-effort bonus that's allowed to time out silently.
+    await page.goto(TARGET_URL, { waitUntil: "load", timeout: 45_000 });
+    await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => {});
     await page.screenshot({ path: OUTPUT_PATH, fullPage: true });
   } finally {
     await browser.close();
