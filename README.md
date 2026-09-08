@@ -82,3 +82,8 @@ a small grid of screenshots labeled by OS.
   is the simplest recovery.
 - A leaked PAT (even repo-scoped) lets someone trigger workflow runs on
   your account — don't commit it, don't share the extension's storage.
+- **The `results` branch grows forever.** Every run adds new PNGs and
+  nothing ever deletes old ones — over months of use this bloats the repo
+  and slows down clones. There's no automatic cleanup yet; if it starts to
+  matter, periodically deleting old `results/run-*` folders (or squashing
+  the branch's history) keeps it in check.

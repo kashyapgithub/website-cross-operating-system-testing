@@ -18,6 +18,12 @@ on:
 
 jobs:
   screenshot:
+    # Without this, GITHUB_TOKEN defaults to read-only on many repos and the
+    # git push step below fails with a permission error identical to the
+    # one we hit manually with an under-scoped PAT earlier.
+    permissions:
+      contents: write
+
     strategy:
       # Each OS runs independently and in parallel — one failing OS doesn't
       # block the others from finishing and being committed.
@@ -49,7 +55,6 @@ jobs:
         shell: bash
         env:
           TARGET_URL: ${{ github.event.client_payload.target_url }}
-          OS_NAME: ${{ runner.os == 'Windows' && 'windows' || runner.os == 'macOS' && 'macos' || 'linux' }}
           OUTPUT_PATH: screenshot-output.png
 
       - name: Checkout results branch
@@ -61,9 +66,16 @@ jobs:
 
       - name: Commit screenshot to results branch
         shell: bash
+        # RUN_TAG comes in via `env:`, not `${{ }}` interpolated straight into
+        # this script. repository_dispatch payloads are attacker-influenceable
+        # if a token ever leaks (as very nearly happened earlier), so any
+        # event data touching a shell script goes through an env var, never
+        # directly into the run: block — GitHub's own security guidance calls
+        # out the direct-interpolation pattern as a script-injection risk.
+        env:
+          RUN_TAG: ${{ github.event.client_payload.run_tag }}
         run: |
           OS_LABEL="${{ runner.os == 'Windows' && 'windows' || runner.os == 'macOS' && 'macos' || 'linux' }}"
-          RUN_TAG="${{ github.event.client_payload.run_tag }}"
           DEST_DIR="results-branch/results/${RUN_TAG}"
           DEST_FILE="${DEST_DIR}/${OS_LABEL}-chromium.png"
 

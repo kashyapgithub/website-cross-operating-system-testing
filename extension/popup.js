@@ -61,11 +61,17 @@ const markSlotDone = (label, imageUrl) => {
 };
 
 const handleRunClick = async () => {
+  const targetUrl = await getActiveTabUrl();
+
+  if (!/^https?:\/\//.test(targetUrl)) {
+    setStatus("This isn't a testable web page — open a real http(s) site first.", "error");
+    return;
+  }
+
   runBtn.disabled = true;
   resetBench();
   setStatus("Starting run…");
 
-  const targetUrl = await getActiveTabUrl();
   const port = chrome.runtime.connect({ name: "cross-os-test" });
 
   port.onMessage.addListener((message) => {
