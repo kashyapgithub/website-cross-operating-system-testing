@@ -1,89 +1,124 @@
-# Cross-OS Page Tester
+<p align="center">
+  <img src="docs/banner.png" alt="cross-os-tester — see your site on Windows, macOS and Linux, for free" width="100%" />
+</p>
 
-Free cross-OS visual testing: a Chrome extension triggers a GitHub Actions
-workflow that screenshots a page on real Windows, macOS, and Linux runners,
-and the extension displays the results.
+<p align="center">
+  <img alt="Cost" src="https://img.shields.io/badge/cost-%240-6fe3c4?style=flat-square" />
+  <img alt="Runners" src="https://img.shields.io/badge/runs%20on-Windows%20%7C%20macOS%20%7C%20Linux-4fc3f7?style=flat-square" />
+  <img alt="Engine" src="https://img.shields.io/badge/powered%20by-Playwright-2c2f38?style=flat-square" />
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-8b8fa3?style=flat-square" />
+</p>
 
-## How it fits together
+Click a button in a Chrome extension. Get back real screenshots of your page
+from a real Windows machine, a real Mac, and a real Linux box — without
+paying for BrowserStack, LambdaTest, or any device farm.
 
+## How
+
+GitHub gives every repo free, real OS runners for CI. This project just
+points that at your website instead of at test suites.
+
+```mermaid
+flowchart LR
+    A["🧩 Extension popup<br/>Run test"] -->|dispatches| B["⚙️ GitHub Actions<br/>3 OS runners, parallel"]
+    B -->|Playwright| C["🖥️ Windows"]
+    B -->|Playwright| D["🍎 macOS"]
+    B -->|Playwright| E["🐧 Linux"]
+    C & D & E -->|commit PNGs| F["📦 results branch"]
+    F -->|polls & renders| A
 ```
-[Popup: "Test this page"]
-        │
-        ▼
-[background.js] --POST--> [GitHub repository_dispatch API]
-        │                          │
-        │                          ▼
-        │                 [Actions workflow: 3 OS runners in parallel]
-        │                          │
-        │                          ▼
-        │                 [Playwright screenshots each OS]
-        │                          │
-        │                          ▼
-        │                 [Committed to `results` branch]
-        │
-        ▼ (polls every 10s)
-[GitHub Contents API] --returns image bytes--> [Popup renders grid]
-```
 
-## One-time setup
+No server to host. No paid API. Your GitHub account is the whole backend.
 
-### 1. Create the GitHub repo
-Push this folder to a new repo (public or private — both work, since the
-extension authenticates with a token either way).
+## What it looks like
 
-### 2. Create an empty `results` branch
-The workflow commits screenshots here, kept separate from your main branch
-so screenshot history doesn't clutter your commits.
+<p align="center">
+  <img src="docs/popup-mockup.png" alt="Extension popup showing Windows, macOS, and Linux each with a captured screenshot" width="360" />
+</p>
+
+Each OS updates independently the moment it finishes — Linux and Windows
+runners are usually done in under a minute; macOS runners take longer to
+spin up, so you're not stuck watching one spinner for five minutes with no
+idea what's happening.
+
+## Setup
+
+Five steps, about ten minutes total, all one-time.
+
+| # | Step | Where |
+|---|------|-------|
+| 1 | Push this repo to GitHub | your terminal |
+| 2 | Create an empty `results` branch | your terminal |
+| 3 | Generate a fine-grained PAT scoped to this repo, with **Contents: Read & write** and **Actions: Read & write** | github.com/settings/tokens |
+| 4 | Load the `extension/` folder as an unpacked extension | `chrome://extensions` |
+| 5 | Paste the token once in the extension's settings | popup → ⚙ |
+
+Full commands and exact permission screenshots are in the steps below.
+
+<details>
+<summary><strong>1–2: Push the repo and create the results branch</strong></summary>
 
 ```bash
+git init
+git add .
+git commit -m "Initial cross-OS tester setup"
+git branch -M main
+git remote add origin https://github.com/<you>/<repo>.git
+git push -u origin main
+
 git checkout --orphan results
 git rm -rf .
 git commit --allow-empty -m "Initial empty results branch"
 git push origin results
 git checkout main
 ```
+</details>
 
-### 3. Generate a Personal Access Token
-Go to **github.com/settings/tokens?type=beta** → *Generate new token*
-(fine-grained). Scope it to **only this repo**, with:
-- **Actions**: Read and write
-- **Contents**: Read and write
+<details>
+<summary><strong>3: Generate the token</strong></summary>
 
-### 4. Load the extension
-1. Open `chrome://extensions`
-2. Enable **Developer mode**
-3. **Load unpacked** → select the `extension/` folder
-4. Click the extension icon once — it'll prompt you to the setup page
-   automatically the first time there's no saved token
-5. Paste your token, repo owner, and repo name — saved forever after this
+github.com → **Settings** → **Developer settings** → **Personal access
+tokens** → **Fine-grained tokens** → **Generate new token**
+
+- Repository access: **Only select repositories** → this repo
+- Permissions: **Contents → Read and write**, **Actions → Read and write**
+
+</details>
+
+<details>
+<summary><strong>4–5: Load and configure the extension</strong></summary>
+
+1. `chrome://extensions` → enable **Developer mode**
+2. **Load unpacked** → select the `extension/` folder
+3. Click the extension icon — first run opens setup automatically
+4. Paste the token, your GitHub username, and the repo name — saved once,
+   used forever after
+
+</details>
 
 ## Using it
-Open any page, click the extension icon, click **Test this page**. Expect
-1–4 minutes (macOS runners are the slow part to spin up). Results appear as
-a small grid of screenshots labeled by OS.
+
+Open any page, click the extension icon, click **Run test**. Screenshots
+appear in the popup as each OS finishes — click one to expand it inline.
 
 ## Extending it
-- **Add more browsers per OS**: edit `TEST_COMBINATIONS` in `background.js`
-  and the matrix step in `capture.js`'s browser install line — Playwright
-  supports `firefox` and `webkit` the same way as `chromium`.
-- **Keep history**: point a Supabase table at the `results` branch contents
-  instead of just showing the latest run.
-- **Reduce Actions minutes usage**: macOS runners cost 10x your quota vs
-  Linux — drop `macos-latest` from the matrix if you mostly care about
-  Windows vs Linux differences.
 
-## Known limitations (be aware, not surprised)
-- WebKit-on-Linux approximates Safari's engine but isn't pixel-identical to
-  real macOS Safari — good for layout bugs, not font-hinting nitpicks.
-- The popup's poll can take a few minutes; closing the popup mid-run is
-  fine, the background service worker keeps polling, but MV3 service
-  workers can be killed by Chrome if idle too long between fetches — if a
-  run seems stuck, reopening the popup and clicking "Test this page" again
-  is the simplest recovery.
-- A leaked PAT (even repo-scoped) lets someone trigger workflow runs on
-  your account — don't commit it, don't share the extension's storage.
-- **The `results` branch grows forever.** Every run adds new PNGs and
-  nothing ever deletes old ones — over months of use this bloats the repo
-  and slows down clones. There's no automatic cleanup yet; if it starts to
-  matter, periodically deleting old `results/run-*` folders (or squashing
-  the branch's history) keeps it in check.
+- **More browsers per OS** — edit `TEST_COMBINATIONS` in `extension/background.js`;
+  Playwright supports `firefox` and `webkit` the same way as `chromium`.
+- **History instead of just the latest run** — point a database at the
+  `results` branch's contents instead of only showing the newest.
+- **Fewer Actions minutes** — macOS runners cost 10× your free-tier quota
+  versus Linux; drop `macos-latest` from the workflow matrix if you mostly
+  care about Windows vs. Linux.
+
+## Known limitations
+
+- WebKit-on-Linux approximates Safari's engine, not real macOS Safari —
+  fine for layout bugs, not for font-hinting-level nitpicks.
+- The `results` branch grows forever — nothing prunes old screenshots yet.
+  Fine for a while; eventually worth deleting old `results/run-*` folders.
+- MV3 service workers can be killed by Chrome if idle too long mid-poll —
+  if a run seems stuck, reopening the popup and clicking **Run test** again
+  is the recovery.
+- A leaked token lets someone trigger workflow runs on your account — don't
+  commit it, don't share the extension's storage.
