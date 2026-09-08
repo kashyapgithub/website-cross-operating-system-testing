@@ -1,0 +1,227 @@
+/* -----------------------------------------------------------------------
+   popup.css
+   Token system shared in spirit with options.css: a small "QA lab" look
+   built around the actual subject (checking real machines), not a generic
+   card-and-shadow kit. Colors on the OS dots are functional labels, not
+   decoration - they're the fastest way to tell rows apart at a glance.
+   ----------------------------------------------------------------------- */
+
+:root {
+  --bg: #14151a;
+  --panel: #1d1f26;
+  --border: #2c2f38;
+  --text: #edeef2;
+  --text-muted: #8b8fa3;
+  --accent: #6fe3c4;
+  --accent-dim: #3f8b78;
+  --danger: #e2725b;
+
+  --os-windows: #4fc3f7;
+  --os-macos: #c9cdd6;
+  --os-linux: #f2a65a;
+
+  --font-label: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  --font-body: -apple-system, "Inter", "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  width: 23rem;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+}
+
+.popup {
+  padding: 1rem;
+}
+
+/* ---------- header ---------- */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.app-header__mark {
+  font-family: var(--font-label);
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 0.2rem;
+  line-height: 1;
+}
+
+.icon-btn:hover {
+  color: var(--text);
+}
+
+/* ---------- target url + run button ---------- */
+
+.target-url {
+  font-family: var(--font-label);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.run-button {
+  width: 100%;
+  padding: 0.7rem;
+  border: 1px solid var(--accent-dim);
+  border-radius: 0.4rem;
+  background: var(--accent);
+  color: #0b1512;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+
+.run-button:hover {
+  background: #86ebd1;
+}
+
+.run-button:active {
+  transform: scale(0.98);
+}
+
+.run-button:disabled {
+  background: var(--panel);
+  border-color: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.status-line {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  min-height: 1rem;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.status-line[data-tone="error"] {
+  color: var(--danger);
+}
+
+/* ---------- bench (the OS test slots) ---------- */
+
+.bench {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bench__slot {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.65rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  transition: border-color 0.2s ease;
+}
+
+.bench__slot[data-active="true"] {
+  border-color: var(--accent-dim);
+}
+
+.bench__dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.bench__dot--windows {
+  background: var(--os-windows);
+}
+
+.bench__dot--macos {
+  background: var(--os-macos);
+}
+
+.bench__dot--linux {
+  background: var(--os-linux);
+}
+
+.bench__info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.bench__label {
+  font-family: var(--font-label);
+  font-size: 0.75rem;
+}
+
+.bench__state {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 0.1rem;
+}
+
+.bench__state[data-state="running"] {
+  color: var(--accent);
+  animation: pulse-text 1.4s ease-in-out infinite;
+}
+
+.bench__state[data-state="done"] {
+  color: var(--accent);
+}
+
+.bench__state[data-state="error"] {
+  color: var(--danger);
+}
+
+@keyframes pulse-text {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.bench__thumb {
+  height: 2.4rem;
+  width: 3.6rem;
+  object-fit: cover;
+  border-radius: 0.3rem;
+  border: 1px solid var(--border);
+  cursor: zoom-in;
+  transition: height 0.2s ease, width 0.2s ease;
+  flex-shrink: 0;
+}
+
+.bench__thumb[data-expanded="true"] {
+  height: 10rem;
+  width: 100%;
+  object-fit: contain;
+  cursor: zoom-out;
+}
+
+/* When one thumb expands, stack it under its row's info instead of beside it */
+.bench__slot:has(.bench__thumb[data-expanded="true"]) {
+  flex-wrap: wrap;
+}

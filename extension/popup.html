@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Cross-OS Tester</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <main class="popup">
+    <header class="app-header">
+      <span class="app-header__mark">cross-os</span>
+      <button id="settings-btn" class="icon-btn" type="button" aria-label="Settings">⚙</button>
+    </header>
+
+    <p id="current-url" class="target-url"></p>
+
+    <button id="run-btn" class="run-button" type="button">Run test</button>
+
+    <p id="status-line" class="status-line" role="status"></p>
+
+    <ul id="bench-list" class="bench">
+      <li class="bench__slot" data-combo="windows">
+        <span class="bench__dot bench__dot--windows"></span>
+        <div class="bench__info">
+          <span class="bench__label">Windows · Chrome</span>
+          <span class="bench__state" data-state="idle">Idle</span>
+        </div>
+        <img class="bench__thumb" alt="" hidden />
+      </li>
+      <li class="bench__slot" data-combo="macos">
+        <span class="bench__dot bench__dot--macos"></span>
+        <div class="bench__info">
+          <span class="bench__label">macOS · Chrome</span>
+          <span class="bench__state" data-state="idle">Idle</span>
+        </div>
+        <img class="bench__thumb" alt="" hidden />
+      </li>
+      <li class="bench__slot" data-combo="linux">
+        <span class="bench__dot bench__dot--linux"></span>
+        <div class="bench__info">
+          <span class="bench__label">Linux · Chrome</span>
+          <span class="bench__state" data-state="idle">Idle</span>
+        </div>
+        <img class="bench__thumb" alt="" hidden />
+      </li>
+    </ul>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+# -----------------------------------------------------------------------------
+# screenshot-test.yml
+#
+# Triggered by the Chrome extension via a `repository_dispatch` API call with
+# event_type "cross-os-test" and a client_payload of { target_url, run_tag }.
+#
+# For each OS in the matrix, a real GitHub-hosted runner opens `target_url`
+# in Playwright, saves a full-page screenshot, then commits it to the
+# `results` branch under results/<run_tag>/<os>-<browser>.png — which the
+# extension polls for via the GitHub Contents API.
+# -----------------------------------------------------------------------------
+
+name: Cross-OS Screenshot Test
+
+on:
+  repository_dispatch:
+    types: [cross-os-test]
+
+jobs:
+  screenshot:
+    strategy:
+      # Each OS runs independently and in parallel — one failing OS doesn't
+      # block the others from finishing and being committed.
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Playwright + Chromium only
+        # --with-deps pulls OS-level libraries Chromium needs; skipped on
+        # macOS/Windows where it isn't required.
+        run: |
+          npm install playwright
+          npx playwright install chromium ${{ runner.os == 'Linux' && '--with-deps' || '' }}
+        shell: bash
+
+      - name: Capture screenshot
+        run: node scripts/capture.js
+        shell: bash
+        env:
+          TARGET_URL: ${{ github.event.client_payload.target_url }}
+          OS_NAME: ${{ runner.os == 'Windows' && 'windows' || runner.os == 'macOS' && 'macos' || 'linux' }}
+          OUTPUT_PATH: screenshot-output.png
+
+      - name: Commit screenshot to results branch
+        shell: bash
+        run: |
+          OS_LABEL="${{ runner.os == 'Windows' && 'windows' || runner.os == 'macOS' && 'macos' || 'linux' }}"
+          RUN_TAG="${{ github.event.client_payload.run_tag }}"
+          DEST_DIR="results/${RUN_TAG}"
+          DEST_FILE="${DEST_DIR}/${OS_LABEL}-chromium.png"
+
+          git fetch origin results || true
+          git checkout results 2>/dev/null || git checkout --orphan results
+          git reset --hard origin/results 2>/dev/null || true
+
+          mkdir -p "${DEST_DIR}"
+          cp screenshot-output.png "${DEST_FILE}"
+
+          git config user.name "cross-os-tester-bot"
+          git config user.email "actions@github.com"
+          git add "${DEST_FILE}"
+          git commit -m "Add ${OS_LABEL} screenshot for ${RUN_TAG}"
+
+          # Retry the push in case two OS jobs finish at the same instant
+          # and race on the results branch.
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin results && git push origin results && break
+            sleep 5
+          done

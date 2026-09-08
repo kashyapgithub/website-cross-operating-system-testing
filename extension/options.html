@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Cross-OS Tester — Setup</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <main class="setup-card">
+    <h1>One-time GitHub setup</h1>
+
+    <p class="setup-card__hint">
+      This extension needs a GitHub Personal Access Token to trigger your
+      screenshot workflow. You only do this once — it's saved locally and
+      reused for every future test.
+    </p>
+
+    <ol class="setup-card__steps">
+      <li>Go to <strong>github.com/settings/tokens?type=beta</strong></li>
+      <li>Click <strong>Generate new token</strong> (fine-grained)</li>
+      <li>Scope it to <strong>only</strong> your cross-os-tester repo</li>
+      <li>Grant <strong>Actions: Read & Write</strong> and <strong>Contents: Read</strong> permissions</li>
+      <li>Paste the token and your repo details below</li>
+    </ol>
+
+    <form id="setup-form">
+      <label for="pat-input">Personal Access Token</label>
+      <input
+        id="pat-input"
+        type="password"
+        placeholder="github_pat_..."
+        autocomplete="off"
+        required
+      />
+
+      <label for="owner-input">Repo owner (your GitHub username)</label>
+      <input id="owner-input" type="text" placeholder="kashyap" required />
+
+      <label for="repo-input">Repo name</label>
+      <input id="repo-input" type="text" placeholder="cross-os-tester" required />
+
+      <button type="submit">Save & continue</button>
+    </form>
+
+    <p id="status-message" class="setup-card__status" role="status"></p>
+  </main>
+
+  <script src="options.js"></script>
+</body>
+</html>

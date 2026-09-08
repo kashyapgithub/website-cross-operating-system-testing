@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Cross-OS Page Tester",
+  "version": "1.0.0",
+  "description": "Trigger a free GitHub Actions job that screenshots the current page across Windows, macOS, and Linux in Chromium, Firefox, and WebKit.",
+
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+
+  "host_permissions": [
+    "https://api.github.com/*"
+  ],
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Test this page across OSes"
+  },
+
+  "options_page": "options.html",
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "icons": {
+    "48": "icon48.png"
+  }
+}
