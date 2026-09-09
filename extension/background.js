@@ -36,7 +36,7 @@ const getCredentials = async () => {
   return hasAllFields ? { githubPat, repoOwner, repoName } : null;
 };
 
-const triggerWorkflow = async ({ githubPat, repoOwner, repoName }, targetUrl, runTag) => {
+const triggerWorkflow = async ({ githubPat, repoOwner, repoName }, targetUrl, runTag, fullPage) => {
   const response = await fetch(`${GITHUB_API}/repos/${repoOwner}/${repoName}/dispatches`, {
     method: "POST",
     headers: {
@@ -46,7 +46,7 @@ const triggerWorkflow = async ({ githubPat, repoOwner, repoName }, targetUrl, ru
     },
     body: JSON.stringify({
       event_type: "cross-os-test",
-      client_payload: { target_url: targetUrl, run_tag: runTag },
+      client_payload: { target_url: targetUrl, run_tag: runTag, full_page: fullPage },
     }),
   });
 
@@ -128,7 +128,7 @@ const handleConnection = (port) => {
 
     try {
       port.postMessage({ type: "TRIGGERED" });
-      await triggerWorkflow(credentials, message.targetUrl, runTag);
+      await triggerWorkflow(credentials, message.targetUrl, runTag, message.fullPage);
       await pollAndStream(port, credentials, runTag);
     } catch (err) {
       port.postMessage({ type: "ERROR", error: err.message });

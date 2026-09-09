@@ -55,6 +55,7 @@ jobs:
         shell: bash
         env:
           TARGET_URL: ${{ github.event.client_payload.target_url }}
+          FULL_PAGE: ${{ github.event.client_payload.full_page }}
           OUTPUT_PATH: screenshot-output.png
 
       - name: Checkout results branch

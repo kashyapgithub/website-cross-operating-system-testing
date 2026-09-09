@@ -10,6 +10,8 @@ const currentUrlEl = document.getElementById("current-url");
 const runBtn = document.getElementById("run-btn");
 const statusLine = document.getElementById("status-line");
 const settingsBtn = document.getElementById("settings-btn");
+const fullPageToggle = document.getElementById("fullpage-toggle");
+const fullPageToggleLabel = document.getElementById("fullpage-toggle-label");
 
 const slotByLabel = {
   "Windows · Chrome": document.querySelector('[data-combo="windows"]'),
@@ -105,13 +107,16 @@ const handleRunClick = async () => {
     }
   });
 
-  port.postMessage({ type: "START", targetUrl });
+  port.postMessage({ type: "START", targetUrl, fullPage: fullPageToggle.checked });
 };
 
 const init = async () => {
   currentUrlEl.textContent = await getActiveTabUrl();
   runBtn.addEventListener("click", handleRunClick);
   settingsBtn.addEventListener("click", () => chrome.runtime.openOptionsPage());
+  fullPageToggle.addEventListener("change", () => {
+    fullPageToggleLabel.textContent = fullPageToggle.checked ? "Full page" : "Visible area only";
+  });
 };
 
 init();

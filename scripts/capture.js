@@ -1,17 +1,25 @@
 // -----------------------------------------------------------------------------
 // capture.js
 //
-// A single, OS-agnostic script: it takes the target URL and output path from
-// environment variables (set differently per-OS by the workflow) and produces
-// one full-page screenshot. Any rendering differences between the resulting
-// images across the matrix ARE the cross-OS visual differences you're
-// checking for — same script, same browser engine, different real hardware.
+// A single, OS-agnostic script: it takes the target URL, output path, and
+// capture mode from environment variables (set differently per-OS by the
+// workflow) and produces one screenshot — full page or viewport-only,
+// depending on what the extension's toggle sent. Any rendering differences
+// between the resulting images across the matrix ARE the cross-OS visual
+// differences you're checking for — same script, same browser engine,
+// different real hardware.
 // -----------------------------------------------------------------------------
 
 const { chromium } = require("playwright");
 
 const TARGET_URL = process.env.TARGET_URL;
 const OUTPUT_PATH = process.env.OUTPUT_PATH ?? "screenshot-output.png";
+
+// GitHub Actions passes booleans through client_payload as the strings
+// "true"/"false" (JSON booleans get stringified for env vars), so this
+// compares against the string explicitly rather than truthiness. Defaults
+// to true (full page) if the value is missing for any reason.
+const CAPTURE_FULL_PAGE = process.env.FULL_PAGE !== "false";
 
 // A fixed viewport keeps screenshots comparable across OSes — otherwise a
 // difference in default window size would look like a rendering bug.
@@ -37,7 +45,7 @@ const captureScreenshot = async () => {
     // best-effort bonus that's allowed to time out silently.
     await page.goto(TARGET_URL, { waitUntil: "load", timeout: 45_000 });
     await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => {});
-    await page.screenshot({ path: OUTPUT_PATH, fullPage: true });
+    await page.screenshot({ path: OUTPUT_PATH, fullPage: CAPTURE_FULL_PAGE });
   } finally {
     await browser.close();
   }

@@ -101,6 +101,13 @@ tokens** → **Fine-grained tokens** → **Generate new token**
 Open any page, click the extension icon, click **Run test**. Screenshots
 appear in the popup as each OS finishes — click one to expand it inline.
 
+The **Full page** toggle above the button controls how much of the page
+gets captured: on (default) scrolls through and stitches the entire page,
+off captures just what's visible in the viewport. Long, tall pages are
+easier to actually read as a viewport-only shot in the small popup preview
+— the full-page version is still useful, just better viewed at full
+resolution from the `results` branch on GitHub directly.
+
 ## Extending it
 
 - **More browsers per OS** — edit `TEST_COMBINATIONS` in `extension/background.js`;
