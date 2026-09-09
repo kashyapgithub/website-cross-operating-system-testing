@@ -9,11 +9,7 @@
   <img alt="License" src="https://img.shields.io/badge/license-MIT-8b8fa3?style=flat-square" />
 </p>
 
-## New to coding? Start here 👋
-
-If you already know what a Chrome extension, a git repo, and CI are, skip
-down to [How](#how) — this section is a slow, no-jargon walkthrough for
-anyone still learning.
+## Overview
 
 ### What problem does this solve?
 
@@ -24,7 +20,7 @@ open your site on lots of different real computers to check. Those
 services usually cost money.
 
 This project does the same thing, but for free, using a trick most
-beginners don't know about yet.
+people don't know about yet.
 
 ### The trick: GitHub already owns free computers you can borrow
 
@@ -65,7 +61,7 @@ the work; your extension just asks for it and shows you the result.
 | **Token (PAT)** | A long, secret password-like code that proves to GitHub "this extension is allowed to act on my behalf." Never share it or paste it anywhere public. |
 | **Branch** | A separate "version" of your project's history. This project uses one branch (`main`) for the actual code, and a second branch (`results`) purely as a storage bin for screenshots. |
 
-### Setting it up (beginner pace)
+### Setting it up, step by step
 
 You'll need: a free [GitHub account](https://github.com), [Git](https://git-scm.com/downloads)
 installed on your computer, and [Google Chrome](https://www.google.com/chrome/).
