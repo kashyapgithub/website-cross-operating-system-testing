@@ -63,14 +63,22 @@ const markSlotDone = (label, imageUrl) => {
 };
 
 const handleRunClick = async () => {
+  // Disabled synchronously, before any await — an async function yields
+  // control back to the browser at the first `await`, so a fast double-
+  // click could otherwise invoke this handler a second time before the
+  // first call ever reaches the line that disables the button, firing two
+  // overlapping GitHub Actions runs from one click.
+  if (runBtn.disabled) return;
+  runBtn.disabled = true;
+
   const targetUrl = await getActiveTabUrl();
 
   if (!/^https?:\/\//.test(targetUrl)) {
     setStatus("This isn't a testable web page — open a real http(s) site first.", "error");
+    runBtn.disabled = false;
     return;
   }
 
-  runBtn.disabled = true;
   resetBench();
   setStatus("Starting run…");
 

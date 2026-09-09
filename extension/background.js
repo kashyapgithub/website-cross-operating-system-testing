@@ -78,13 +78,25 @@ const tryFetchScreenshot = async ({ githubPat, repoOwner, repoName }, path) => {
   return `data:image/png;base64,${arrayBufferToBase64(arrayBuffer)}`;
 };
 
+/**
+ * Converts raw bytes to base64. Service workers have no FileReader, so this
+ * goes through btoa() manually — chunked (not one byte at a time) because a
+ * long full-page screenshot can be several MB, and String.fromCharCode
+ * called once per byte gets noticeably slow at that size. Chunking also
+ * avoids the classic String.fromCharCode.apply(null, hugeArray) stack
+ * overflow some naive implementations hit on large inputs.
+ */
 const arrayBufferToBase64 = (arrayBuffer) => {
   const bytes = new Uint8Array(arrayBuffer);
-  let binary = "";
-  for (let i = 0; i < bytes.length; i += 1) {
-    binary += String.fromCharCode(bytes[i]);
+  const CHUNK_SIZE = 8192;
+  const chunks = [];
+
+  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+    const chunk = bytes.subarray(i, i + CHUNK_SIZE);
+    chunks.push(String.fromCharCode.apply(null, chunk));
   }
-  return btoa(binary);
+
+  return btoa(chunks.join(""));
 };
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

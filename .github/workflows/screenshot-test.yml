@@ -69,7 +69,11 @@ jobs:
         with:
           ref: results
           path: results-branch
-          fetch-depth: 0
+          # Shallow is enough — this job only ever adds one new commit on
+          # top of the current tip, never reads old history. Fetching
+          # everything here would make this checkout keep getting slower
+          # as the results branch accumulates months of screenshots.
+          fetch-depth: 1
 
       - name: Commit screenshot to results branch
         shell: bash
