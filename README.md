@@ -9,6 +9,109 @@
   <img alt="License" src="https://img.shields.io/badge/license-MIT-8b8fa3?style=flat-square" />
 </p>
 
+## New to coding? Start here 👋
+
+If you already know what a Chrome extension, a git repo, and CI are, skip
+down to [How](#how) — this section is a slow, no-jargon walkthrough for
+anyone still learning.
+
+### What problem does this solve?
+
+A website can look slightly different depending on the computer it's
+opened on — different operating system, different browser, different font
+rendering. Big companies pay for services like BrowserStack that let you
+open your site on lots of different real computers to check. Those
+services usually cost money.
+
+This project does the same thing, but for free, using a trick most
+beginners don't know about yet.
+
+### The trick: GitHub already owns free computers you can borrow
+
+When you create a project on GitHub, GitHub gives you access to
+**"Actions"** — a feature that lets you run code on real, temporary
+computers in GitHub's data centers, for free, up to a generous monthly
+limit. People normally use this to automatically test their code every
+time they save it. This project points that same feature at a *website*
+instead of at code, and takes a screenshot with it.
+
+### What actually happens, step by step
+
+1. You install a small **Chrome extension** (a mini-program that adds a
+   button to your browser).
+2. You click that button while looking at a webpage.
+3. The extension sends a message to GitHub saying "please start 3
+   computers — one Windows, one Mac, one Linux — and open this URL on
+   each of them."
+4. GitHub spins up those 3 computers (this takes a minute or two).
+5. Each computer opens the page using a tool called **Playwright** (code
+   that can control a web browser automatically) and takes a screenshot.
+6. Each computer saves its screenshot into your GitHub project.
+7. The extension keeps checking GitHub every few seconds — "is the
+   screenshot ready yet?" — and shows each one in its popup the moment
+   it appears.
+
+You never touch a Windows or Mac computer yourself. GitHub's computers do
+the work; your extension just asks for it and shows you the result.
+
+### A few words you'll see a lot, explained simply
+
+| Word | What it actually means here |
+|---|---|
+| **Repo (repository)** | A folder for your project, stored on GitHub, with a history of every change ever made to it (that history is called **git**). |
+| **Chrome extension** | A small program that adds a feature to your browser — in this case, a popup with a button. |
+| **GitHub Actions / workflow** | A recipe file (`.yml`) that tells GitHub "when X happens, start a computer and run these commands." |
+| **Runner** | One of those temporary computers GitHub starts for you. |
+| **Token (PAT)** | A long, secret password-like code that proves to GitHub "this extension is allowed to act on my behalf." Never share it or paste it anywhere public. |
+| **Branch** | A separate "version" of your project's history. This project uses one branch (`main`) for the actual code, and a second branch (`results`) purely as a storage bin for screenshots. |
+
+### Setting it up (beginner pace)
+
+You'll need: a free [GitHub account](https://github.com), [Git](https://git-scm.com/downloads)
+installed on your computer, and [Google Chrome](https://www.google.com/chrome/).
+
+1. **Create a new, empty repository** on github.com (click the **+** in the
+   top right → **New repository**). Don't add a README when it asks — this
+   project already has one.
+2. **Open a terminal** (Terminal app on Mac, Command Prompt or PowerShell
+   on Windows) and navigate into this project's folder using `cd`.
+3. **Copy-paste these commands one at a time**, replacing `<you>` and
+   `<repo>` with your actual GitHub username and repo name:
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial cross-OS tester setup"
+   git branch -M main
+   git remote add origin https://github.com/<you>/<repo>.git
+   git push -u origin main
+   ```
+   Each line does one thing: `init` starts tracking this folder with git,
+   `add`/`commit` save a snapshot, and `remote add`/`push` upload that
+   snapshot to GitHub.
+4. **Create the second branch** (the screenshot storage bin):
+   ```bash
+   git checkout --orphan results
+   git rm -rf .
+   git commit --allow-empty -m "Initial empty results branch"
+   git push origin results
+   git checkout main
+   ```
+5. **Get a token** so the extension is allowed to talk to your repo:
+   github.com → click your profile picture → **Settings** → **Developer
+   settings** → **Personal access tokens** → **Fine-grained tokens** →
+   **Generate new token**. Set repository access to only this repo, and
+   turn on **Contents: Read and write** and **Actions: Read and write**.
+   Copy the token somewhere safe — GitHub only shows it once.
+6. **Load the extension**: open `chrome://extensions` in Chrome, turn on
+   **Developer mode** (top right), click **Load unpacked**, and select
+   this project's `extension` folder.
+7. **Paste your token**: click the extension's icon, then the ⚙ settings
+   icon, and paste in the token plus your GitHub username and repo name.
+
+That's the whole setup. From here on, just open any website and click
+**Run test**.
+
+
 Click a button in a Chrome extension. Get back real screenshots of your page
 from a real Windows machine, a real Mac, and a real Linux box — without
 paying for BrowserStack, LambdaTest, or any device farm.
