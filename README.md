@@ -96,6 +96,30 @@ tokens** → **Fine-grained tokens** → **Generate new token**
 
 </details>
 
+## Testing
+
+```bash
+npm test
+```
+
+Runs an integration test suite against the *real* `background.js` and
+`popup.js` — not reimplemented copies. It loads the actual files in a
+sandboxed VM with mocked `chrome.*`/`fetch` APIs and drives them through
+their real entry points, covering:
+
+- the happy path (all 3 OSes stream in independently)
+- missing credentials failing fast without hitting the network
+- a rejected dispatch (e.g. under-scoped token) failing fast
+- the 6-minute timeout path
+- popup-disconnect-mid-run stopping cleanly instead of throwing
+- a byte-exact round-trip test of the base64 image encoding across chunk boundaries
+- the double-click race (this test fails against the pre-fix code — verified by hand)
+
+A separate CI workflow (`.github/workflows/test.yml`) runs this suite plus
+[actionlint](https://github.com/rhysd/actionlint) on every push, so a future
+change that reintroduces one of these bugs gets caught before it reaches
+`main`, not just by manual review.
+
 ## Using it
 
 Open any page, click the extension icon, click **Run test**. Screenshots

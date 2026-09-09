@@ -1,0 +1,34 @@
+# -----------------------------------------------------------------------------
+# test.yml
+#
+# Runs the integration test suite (tests/*.test.js) and lints the screenshot
+# workflow itself on every push and PR. Catches regressions like the
+# double-click race and the blob-URL bug BEFORE they reach main, instead of
+# only being found by manual code review.
+# -----------------------------------------------------------------------------
+
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run integration tests
+        run: node --test tests/background.test.js tests/popup.test.js
+
+      - name: Lint the screenshot workflow
+        run: |
+          curl -sL "https://github.com/rhysd/actionlint/releases/download/v1.7.7/actionlint_1.7.7_linux_amd64.tar.gz" | tar -xz actionlint
+          ./actionlint .github/workflows/*.yml
