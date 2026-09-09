@@ -89,32 +89,42 @@ const arrayBufferToBase64 = (arrayBuffer) => {
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const pollAndStream = async (port, credentials, runTag) => {
+const pollAndStream = async (port, credentials, runTag, isAborted) => {
   const deadline = Date.now() + POLL_TIMEOUT_MS;
   const found = new Set();
 
-  while (Date.now() < deadline && found.size < TEST_COMBINATIONS.length) {
+  while (Date.now() < deadline && found.size < TEST_COMBINATIONS.length && !isAborted()) {
     const pending = TEST_COMBINATIONS.filter((combo) => !found.has(combo.label));
 
     await Promise.all(
       pending.map(async (combo) => {
         const path = `results/${runTag}/${combo.os}-${combo.browser}.png`;
         const imageUrl = await tryFetchScreenshot(credentials, path);
-        if (!imageUrl) return;
+        if (!imageUrl || isAborted()) return;
 
         found.add(combo.label);
         port.postMessage({ type: "COMBO_READY", label: combo.label, imageUrl });
       })
     );
 
-    if (found.size < TEST_COMBINATIONS.length) await wait(POLL_INTERVAL_MS);
+    if (found.size < TEST_COMBINATIONS.length && !isAborted()) await wait(POLL_INTERVAL_MS);
   }
+
+  // Popup closed before we finished — nothing left to tell it, and posting
+  // to a disconnected port would just throw. Stop quietly instead of
+  // burning the rest of the 6-minute budget on API calls nobody's watching.
+  if (isAborted()) return;
 
   const timedOut = found.size < TEST_COMBINATIONS.length;
   port.postMessage({ type: "RUN_FINISHED", timedOut });
 };
 
 const handleConnection = (port) => {
+  let aborted = false;
+  port.onDisconnect.addListener(() => {
+    aborted = true;
+  });
+
   port.onMessage.addListener(async (message) => {
     if (message.type !== "START") return;
 
@@ -129,9 +139,18 @@ const handleConnection = (port) => {
     try {
       port.postMessage({ type: "TRIGGERED" });
       await triggerWorkflow(credentials, message.targetUrl, runTag, message.fullPage);
-      await pollAndStream(port, credentials, runTag);
+      await pollAndStream(port, credentials, runTag, () => aborted);
     } catch (err) {
-      port.postMessage({ type: "ERROR", error: err.message });
+      // The port may already be gone if the popup closed mid-request —
+      // guard the error report itself so that case doesn't throw a second,
+      // uglier error on top of the first.
+      if (!aborted) {
+        try {
+          port.postMessage({ type: "ERROR", error: err.message });
+        } catch {
+          // Port died between the abort flag and this call — nothing to do.
+        }
+      }
     }
   });
 };

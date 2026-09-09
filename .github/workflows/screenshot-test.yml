@@ -2,12 +2,14 @@
 # screenshot-test.yml
 #
 # Triggered by the Chrome extension via a `repository_dispatch` API call with
-# event_type "cross-os-test" and a client_payload of { target_url, run_tag }.
+# event_type "cross-os-test" and a client_payload of
+# { target_url, run_tag, full_page }.
 #
 # For each OS in the matrix, a real GitHub-hosted runner opens `target_url`
-# in Playwright, saves a full-page screenshot, then commits it to the
-# `results` branch under results/<run_tag>/<os>-<browser>.png — which the
-# extension polls for via the GitHub Contents API.
+# in a pinned Playwright/Chromium version (see package.json), saves a
+# screenshot (full-page or viewport-only, per full_page), then commits it to
+# the `results` branch under results/<run_tag>/<os>-<browser>.png — which
+# the extension polls for via the GitHub Contents API.
 # -----------------------------------------------------------------------------
 
 name: Cross-OS Screenshot Test
@@ -41,12 +43,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
 
       - name: Install Playwright + Chromium only
-        # --with-deps pulls OS-level libraries Chromium needs; skipped on
-        # macOS/Windows where it isn't required.
+        # npm ci installs the exact pinned version from package-lock.json —
+        # not "whatever's latest today" — so a run in January and a run in
+        # June use the identical Chromium build. For a tool whose entire
+        # point is comparing renders, an unpinned engine would let "the
+        # tool changed" masquerade as "the site changed."
         run: |
-          npm install playwright
+          npm ci
           npx playwright install chromium ${{ runner.os == 'Linux' && '--with-deps' || '' }}
         shell: bash
 
