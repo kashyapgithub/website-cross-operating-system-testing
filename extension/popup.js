@@ -122,8 +122,19 @@ const init = async () => {
   currentUrlEl.textContent = await getActiveTabUrl();
   runBtn.addEventListener("click", handleRunClick);
   settingsBtn.addEventListener("click", () => chrome.runtime.openOptionsPage());
+
+  // Restore the last-used capture mode — without this, the toggle silently
+  // resets to "Full page" every time the popup reopens, discarding a choice
+  // the user just made.
+  const { fullPage } = await chrome.storage.local.get(["fullPage"]);
+  if (fullPage !== undefined) {
+    fullPageToggle.checked = fullPage;
+    fullPageToggleLabel.textContent = fullPage ? "Full page" : "Visible area only";
+  }
+
   fullPageToggle.addEventListener("change", () => {
     fullPageToggleLabel.textContent = fullPageToggle.checked ? "Full page" : "Visible area only";
+    chrome.storage.local.set({ fullPage: fullPageToggle.checked });
   });
 };
 

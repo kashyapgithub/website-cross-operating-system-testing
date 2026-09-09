@@ -50,7 +50,7 @@ function makeElement(id) {
  * Loads popup.js in a sandbox with a fake DOM/chrome, and returns the
  * elements + a way to fetch messages sent over the mocked port.
  */
-function loadPopupScript({ activeTabUrl = "https://example.com" } = {}) {
+function loadPopupScript({ activeTabUrl = "https://example.com", storedFullPage } = {}) {
   const elements = {
     "current-url": makeElement("current-url"),
     "run-btn": makeElement("run-btn"),
@@ -76,10 +76,21 @@ function loadPopupScript({ activeTabUrl = "https://example.com" } = {}) {
 
   const connectCalls = [];
   let openOptionsPageCalls = 0;
+  const storageSetCalls = [];
+  let storedValue = storedFullPage;
 
   const chromeMock = {
     tabs: {
       query: async () => [{ url: activeTabUrl }],
+    },
+    storage: {
+      local: {
+        get: async (_keys) => (storedValue === undefined ? {} : { fullPage: storedValue }),
+        set: async (obj) => {
+          storageSetCalls.push(obj);
+          if ("fullPage" in obj) storedValue = obj.fullPage;
+        },
+      },
     },
     runtime: {
       connect: (opts) => {
@@ -119,6 +130,7 @@ function loadPopupScript({ activeTabUrl = "https://example.com" } = {}) {
     slotElements,
     connectCalls,
     getOpenOptionsPageCalls: () => openOptionsPageCalls,
+    getStorageSetCalls: () => storageSetCalls,
   };
 }
 
@@ -178,6 +190,26 @@ test("after a run finishes, the button is re-enabled so a real second run can st
   elements["run-btn"]._fire("click");
   await flushMicrotasks();
   assert.equal(connectCalls.length, 2, "a second click after completion should start a new run");
+});
+
+test("full-page toggle: restores a previously saved choice on load", async () => {
+  const { elements } = loadPopupScript({ storedFullPage: false });
+  await flushMicrotasks();
+
+  assert.equal(elements["fullpage-toggle"].checked, false, "should restore the saved 'off' choice, not default to on");
+  assert.equal(elements["fullpage-toggle-label"].textContent, "Visible area only");
+});
+
+test("full-page toggle: saves the choice when changed (regression test for the persistence fix)", async () => {
+  const { elements, getStorageSetCalls } = loadPopupScript({ storedFullPage: true });
+  await flushMicrotasks();
+
+  elements["fullpage-toggle"].checked = false;
+  elements["fullpage-toggle"]._fire("change");
+
+  const calls = getStorageSetCalls();
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].fullPage, false, "toggling off must persist the new value, not just update the label");
 });
 
 test("settings button opens the options page", async () => {
