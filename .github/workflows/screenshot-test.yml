@@ -47,14 +47,14 @@ jobs:
 
       - name: Install Playwright and requested browsers
         env:
-          BROWSERS: ${{ github.event.client_payload.browsers || 'chromium,firefox,webkit' }}
+          BROWSERS: ${{ github.event.client_payload.browsers }}
         run: |
           npm ci
-          INSTALL_BROWSERS=$(echo "$BROWSERS" | tr ',' ' ')
+          IFS=',' read -r -a BROWSERS_ARR <<< "${BROWSERS:-chromium,firefox,webkit}"
           if [ "$RUNNER_OS" = "Linux" ]; then
-            npx playwright install --with-deps $INSTALL_BROWSERS
+            npx playwright install --with-deps "${BROWSERS_ARR[@]}"
           else
-            npx playwright install $INSTALL_BROWSERS
+            npx playwright install "${BROWSERS_ARR[@]}"
           fi
         shell: bash
 
@@ -71,7 +71,7 @@ jobs:
           TARGET_URL: ${{ github.event.client_payload.target_url }}
           FULL_PAGE: ${{ github.event.client_payload.full_page }}
           RUN_TAG: ${{ github.event.client_payload.run_tag }}
-          BROWSERS: ${{ github.event.client_payload.browsers || 'chromium,firefox,webkit' }}
+          BROWSERS: ${{ github.event.client_payload.browsers }}
         run: |
           case "$RUNNER_OS" in
             Windows) OS_LABEL="windows" ;;
@@ -82,14 +82,14 @@ jobs:
           DEST_DIR="results-branch/results/${RUN_TAG}"
           mkdir -p "${DEST_DIR}"
 
-          cd results-branch
+          cd results-branch || exit 1
           git config user.name "cross-os-tester-bot"
           git config user.email "actions@github.com"
-          cd ..
+          cd .. || exit 1
 
-          IFS=',' read -ra BROWSER_LIST <<< "$BROWSERS"
+          IFS=',' read -r -a BROWSER_LIST <<< "${BROWSERS:-chromium,firefox,webkit}"
           for browser in "${BROWSER_LIST[@]}"; do
-            browser=$(echo "$browser" | xargs)
+            browser=$(echo "$browser" | tr -d '[:space:]')
             if [ -z "$browser" ]; then continue; fi
 
             echo "Capturing $browser on $OS_LABEL..."
@@ -98,7 +98,7 @@ jobs:
 
             cp "$OUTPUT_FILE" "${DEST_DIR}/${OS_LABEL}-${browser}.png"
 
-            cd results-branch
+            cd results-branch || exit 1
             git add "results/${RUN_TAG}/${OS_LABEL}-${browser}.png"
             git commit -m "Add ${OS_LABEL}-${browser} screenshot for ${RUN_TAG}"
 
@@ -106,5 +106,5 @@ jobs:
               git pull --rebase origin results && git push origin results && break
               sleep 5
             done
-            cd ..
+            cd .. || exit 1
           done
