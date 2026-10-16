@@ -10,6 +10,8 @@ const currentUrlEl = document.getElementById("current-url");
 const runBtn = document.getElementById("run-btn");
 const statusLine = document.getElementById("status-line");
 const settingsBtn = document.getElementById("settings-btn");
+const setupBanner = document.getElementById("setup-banner");
+const setupBannerBtn = document.getElementById("setup-banner-btn");
 const popoutBtn = document.getElementById("popout-btn");
 const expandAllBtn = document.getElementById("expand-all-btn");
 const fullPageToggle = document.getElementById("fullpage-toggle");
@@ -251,6 +253,13 @@ const init = async () => {
   }
   runBtn?.addEventListener("click", handleRunClick);
   settingsBtn?.addEventListener("click", () => chrome.runtime.openOptionsPage());
+  setupBannerBtn?.addEventListener("click", () => chrome.runtime.openOptionsPage());
+
+  // Check if credentials are missing to guide first-time users
+  const creds = await chrome.storage.local.get(["githubPat", "repoOwner", "repoName"]);
+  if (!creds?.githubPat || !creds?.repoOwner || !creds?.repoName) {
+    if (setupBanner) setupBanner.hidden = false;
+  }
 
   // Restore the last-used capture mode — without this, the toggle silently
   // resets to "Full page" every time the popup reopens, discarding a choice

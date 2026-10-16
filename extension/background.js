@@ -54,25 +54,39 @@ const getCredentials = async () => {
 
 const triggerWorkflow = async ({ githubPat, repoOwner, repoName }, targetUrl, runTag, fullPage, browserList) => {
   const browsers = Array.isArray(browserList) && browserList.length > 0 ? browserList.join(",") : "chromium";
-  const response = await fetch(`${GITHUB_API}/repos/${repoOwner}/${repoName}/dispatches`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${githubPat}`,
-      Accept: "application/vnd.github+json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      event_type: "cross-os-test",
-      client_payload: {
-        target_url: targetUrl,
-        run_tag: runTag,
-        full_page: fullPage,
-        browsers,
+  let response;
+  try {
+    response = await fetch(`${GITHUB_API}/repos/${repoOwner}/${repoName}/dispatches`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${githubPat}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
       },
-    }),
-  });
+      body: JSON.stringify({
+        event_type: "cross-os-test",
+        client_payload: {
+          target_url: targetUrl,
+          run_tag: runTag,
+          full_page: fullPage,
+          browsers,
+        },
+      }),
+    });
+  } catch (err) {
+    throw new Error(`Network failure connecting to GitHub: ${err.message}`);
+  }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("GitHub rejected credentials (401 Unauthorized). Verify your token in Settings ⚙.");
+    }
+    if (response.status === 403) {
+      throw new Error("GitHub rejected the trigger (403 Forbidden). Ensure your PAT has Actions: Read & write and Contents: Read & write permissions.");
+    }
+    if (response.status === 404) {
+      throw new Error(`Repository ${repoOwner}/${repoName} not found (404). Check owner and repo names in Settings.`);
+    }
     throw new Error(`GitHub rejected the trigger (${response.status}). Check the PAT's permissions.`);
   }
 };
@@ -84,20 +98,25 @@ const triggerWorkflow = async ({ githubPat, repoOwner, repoName }, targetUrl, ru
  * in MV3, so a blob: URL made here would be dead on arrival in popup.js.
  */
 const tryFetchScreenshot = async ({ githubPat, repoOwner, repoName }, path) => {
-  const response = await fetch(
-    `${GITHUB_API}/repos/${repoOwner}/${repoName}/contents/${path}?ref=results`,
-    {
-      headers: {
-        Authorization: `Bearer ${githubPat}`,
-        Accept: "application/vnd.github.raw",
-      },
-    }
-  );
+  try {
+    const response = await fetch(
+      `${GITHUB_API}/repos/${repoOwner}/${repoName}/contents/${path}?ref=results`,
+      {
+        headers: {
+          Authorization: `Bearer ${githubPat}`,
+          Accept: "application/vnd.github.raw",
+        },
+      }
+    );
 
-  if (!response.ok) return null;
+    if (!response.ok) return null;
 
-  const arrayBuffer = await response.arrayBuffer();
-  return `data:image/png;base64,${arrayBufferToBase64(arrayBuffer)}`;
+    const arrayBuffer = await response.arrayBuffer();
+    return `data:image/png;base64,${arrayBufferToBase64(arrayBuffer)}`;
+  } catch {
+    // Transient network drop during polling should not crash the poll loop
+    return null;
+  }
 };
 
 /**

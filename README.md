@@ -103,25 +103,51 @@ installed on your computer, and [Google Chrome](https://www.google.com/chrome/).
    git push origin results
    git checkout main
    ```
-5. **Get a token** so the extension is allowed to talk to your repo:
-   github.com → click your profile picture → **Settings** → **Developer
-   settings** → **Personal access tokens** → **Fine-grained tokens** →
-   **Generate new token**. Set repository access to only this repo, and
-   turn on **Contents: Read and write** and **Actions: Read and write**.
-   Copy the token somewhere safe — GitHub only shows it once.
-6. **Load the extension**: open `chrome://extensions` in Chrome, turn on
-   **Developer mode** (top right), click **Load unpacked**, and select
-   this project's `extension` folder.
-7. **Paste your token**: click the extension's icon, then the ⚙ settings
-   icon, and paste in the token plus your GitHub username and repo name.
+5. **Get a GitHub Personal Access Token**:
+   - **Fastest (1-Click Classic Token)**: Open [GitHub Token Generator](https://github.com/settings/tokens/new?description=Cross-OS%20Page%20Tester&scopes=repo) (the `repo` scope is pre-selected). Scroll to the bottom and click **Generate token**.
+   - **Alternative (Fine-grained Token)**: Go to [github.com/settings/tokens?type=beta](https://github.com/settings/tokens?type=beta). Set Repository access to this repo only, and grant **Actions: Read and write** and **Contents: Read and write**.
+   - Copy the generated token (`ghp_...` or `github_pat_...`).
+6. **Load the extension into Google Chrome**:
+   - In Chrome, navigate to `chrome://extensions`.
+   - Enable **Developer mode** toggle in the top-right corner.
+   - Click **Load unpacked** and select the `extension/` directory from this project.
+7. **Verify & Save Credentials**:
+   - Click the extension icon in Chrome's toolbar, then click the **⚙ (Settings)** icon (or click the setup banner).
+   - Paste your Token, enter your GitHub username (Repo Owner), and enter your repo name.
+   - Click **Verify & Save Connection**. The extension validates your repository against the GitHub API live and confirms access immediately!
 
-That's the whole setup. From here on, just open any website and click
-**Run test**.
+---
 
+### How to Test Any UI (Daily Workflow)
 
-Click a button in a Chrome extension. Get back real screenshots of your page
-from a real Windows machine, a real Mac, and a real Linux box — without
-paying for BrowserStack, LambdaTest, or any device farm.
+1. **Browse to any webpage** you want to test in Chrome (`http://` or `https://`, including staging environments and tunnels).
+2. **Open the extension popup**: Click the Cross-OS icon in your browser toolbar.
+3. **Configure your test run**:
+   - **Capture mode**: Toggle between **Full page** (entire scrollable length) or **Visible area only** (viewport).
+   - **Browsers**: Select which engines to test (**Chrome**, **Firefox**, **Safari / WebKit**).
+4. **Click "Run test"**:
+   - A single message dispatches to GitHub Actions.
+   - Runners on Windows, macOS, and Linux boot in parallel and capture screenshots.
+   - Results stream back live into the popup as each operating system finishes!
+5. **Inspect & Compare Results**:
+   - **Pop out to Full Tab (`⤢`)**: Click the maximize button in the header to expand the popup into a full-width desktop comparison studio with a multi-column grid.
+   - **Expand All / Collapse All**: Click the master toggle to view all 9 screenshots enlarged simultaneously.
+   - **Fullscreen Lightbox**: Click any screenshot thumbnail to open a high-resolution modal with pan, zoom, and `Escape` / `✕` close controls.
+
+---
+
+### Built-in Crash Resilience & Robustness
+
+Websites vary wildly in asset weight, SSL configuration, and infinite scrolling scripts. This tool includes specialized protections to prevent crashes during automated captures:
+
+- **Self-Signed SSL & Staging Support (`ignoreHTTPSErrors: true`)**: Local dev tunnels (ngrok, Cloudflare Tunnel) and staging environments with self-signed SSL certificates are fully supported without certificate rejection crashes.
+- **Heavy Asset & Slow Page Fallback**: If third-party tracking scripts or heavy video ads delay the browser's `load` event past 35s, the runner catches the timeout and captures whatever DOM has successfully painted, preventing job aborts.
+- **Font Rendering Completion**: Runners synchronize with `document.fonts.ready` before capturing, eliminating flash-of-unstyled-text (FOUT) artifacts.
+- **Canvas Buffer Protection**: Infinite scroll pages exceeding browser canvas limits (e.g. >32,767px in WebKit/Firefox) automatically fall back to viewport capture instead of crashing with canvas allocation errors.
+- **Unreachable Domain Diagnostics**: If an unreachable domain or DNS error occurs, the runner captures a formatted visual error card and commits it, so the extension displays the exact diagnostic reason immediately rather than hanging for 6 minutes.
+- **Isolated Multi-Browser Loop**: In the GitHub Actions runner, each browser capture is isolated; a crash or error in one browser engine never terminates the runner or prevents the other browsers from executing.
+- **Transient Network Retry in Extension**: Background polling wraps API requests in resilient error recovery, retrying through temporary WiFi hiccups without terminating active tests.
+
 
 ## How
 

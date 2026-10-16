@@ -94,18 +94,22 @@ jobs:
 
             echo "Capturing $browser on $OS_LABEL..."
             OUTPUT_FILE="screenshot-${OS_LABEL}-${browser}.png"
-            BROWSER="$browser" OUTPUT_PATH="$OUTPUT_FILE" node scripts/capture.js
+            if BROWSER="$browser" OUTPUT_PATH="$OUTPUT_FILE" node scripts/capture.js; then
+              if [ -f "$OUTPUT_FILE" ]; then
+                cp "$OUTPUT_FILE" "${DEST_DIR}/${OS_LABEL}-${browser}.png"
 
-            cp "$OUTPUT_FILE" "${DEST_DIR}/${OS_LABEL}-${browser}.png"
+                cd results-branch || exit 1
+                git add "results/${RUN_TAG}/${OS_LABEL}-${browser}.png"
+                git commit -m "Add ${OS_LABEL}-${browser} screenshot for ${RUN_TAG}" || true
 
-            cd results-branch || exit 1
-            git add "results/${RUN_TAG}/${OS_LABEL}-${browser}.png"
-            git commit -m "Add ${OS_LABEL}-${browser} screenshot for ${RUN_TAG}"
-
-            for attempt in 1 2 3 4 5; do
-              echo "Push attempt ${attempt}/5..."
-              git pull --rebase origin results && git push origin results && break
-              sleep 5
-            done
-            cd .. || exit 1
+                for attempt in 1 2 3 4 5; do
+                  echo "Push attempt ${attempt}/5..."
+                  git pull --rebase -X ours origin results && git push origin results && break
+                  sleep 5
+                done
+                cd .. || exit 1
+              fi
+            else
+              echo "::warning::Capture step for $browser on $OS_LABEL exited with non-zero status; continuing matrix loop."
+            fi
           done

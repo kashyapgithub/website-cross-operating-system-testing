@@ -7,42 +7,90 @@
 </head>
 <body>
   <main class="setup-card">
-    <h1>One-time GitHub setup</h1>
+    <header class="setup-card__header">
+      <span class="setup-card__tag">cross-os</span>
+      <h1>One-time GitHub Setup</h1>
+    </header>
 
     <p class="setup-card__hint">
-      This extension needs a GitHub Personal Access Token to trigger your
-      screenshot workflow. You only do this once — it's saved locally and
-      reused for every future test.
+      This extension uses your GitHub repository and cloud Actions runners to capture screenshots across Windows, macOS, and Linux for free. Your token is stored <strong>locally in your browser</strong> and never leaves your machine.
     </p>
 
-    <ol class="setup-card__steps">
-      <li>Go to <strong>github.com/settings/tokens?type=beta</strong></li>
-      <li>Click <strong>Generate new token</strong> (fine-grained)</li>
-      <li>Scope it to <strong>only</strong> your cross-os-tester repo</li>
-      <li>Grant <strong>Actions: Read & Write</strong> and <strong>Contents: Read</strong> permissions</li>
-      <li>Paste the token and your repo details below</li>
-    </ol>
+    <section class="token-helper">
+      <h2>Step 1: Create a Personal Access Token</h2>
+      <p class="token-helper__desc">Choose whichever token type you prefer:</p>
+      
+      <div class="token-options">
+        <div class="token-choice">
+          <h3>Option A: Classic Token (Fastest — 1 Click)</h3>
+          <p>Creates a classic token with the <code>repo</code> scope pre-selected.</p>
+          <a
+            class="token-btn"
+            href="https://github.com/settings/tokens/new?description=Cross-OS%20Page%20Tester&scopes=repo"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Create Pre-filled Classic Token ↗
+          </a>
+        </div>
 
-    <form id="setup-form">
-      <label for="pat-input">Personal Access Token</label>
-      <input
-        id="pat-input"
-        type="password"
-        placeholder="github_pat_..."
-        autocomplete="off"
-        required
-      />
+        <div class="token-choice">
+          <h3>Option B: Fine-grained Token (Scoped)</h3>
+          <p>
+            Go to <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener noreferrer">github.com/settings/tokens?type=beta</a>, scope to your repo, and grant:
+          </p>
+          <ul>
+            <li><strong>Actions</strong>: Read and write</li>
+            <li><strong>Contents</strong>: Read and write</li>
+          </ul>
+        </div>
+      </div>
+    </section>
 
-      <label for="owner-input">Repo owner (your GitHub username)</label>
-      <input id="owner-input" type="text" placeholder="kashyap" required />
+    <section class="setup-form-section">
+      <h2>Step 2: Enter Details & Verify Connection</h2>
+      <form id="setup-form">
+        <label for="pat-input">GitHub Personal Access Token (PAT)</label>
+        <div class="input-with-action">
+          <input
+            id="pat-input"
+            type="password"
+            placeholder="ghp_... or github_pat_..."
+            autocomplete="off"
+            spellcheck="false"
+            required
+          />
+          <button id="toggle-token-btn" class="secondary-btn" type="button" aria-label="Toggle token visibility">Show</button>
+        </div>
 
-      <label for="repo-input">Repo name</label>
-      <input id="repo-input" type="text" placeholder="cross-os-tester" required />
+        <label for="owner-input">Repo Owner (your GitHub username or org)</label>
+        <input id="owner-input" type="text" placeholder="e.g. kashyapgithub" spellcheck="false" required />
 
-      <button type="submit">Save & continue</button>
-    </form>
+        <label for="repo-input">Repo Name</label>
+        <input id="repo-input" type="text" placeholder="e.g. website-cross-operating-system-testing" spellcheck="false" required />
 
-    <p id="status-message" class="setup-card__status" role="status"></p>
+        <button id="save-btn" class="primary-btn" type="submit">Verify & Save Connection</button>
+      </form>
+
+      <div id="status-message" class="setup-card__status" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="guide-section">
+      <h2>Step 3: How to Test Any UI</h2>
+      <ol class="guide-steps">
+        <li><strong>Open any website</strong> in Google Chrome that you want to test (HTTP or HTTPS).</li>
+        <li><strong>Click the Cross-OS Tester icon</strong> in your browser toolbar to open the popup.</li>
+        <li><strong>Configure capture mode</strong>: Select <em>Full page</em> or <em>Visible area</em>, and check the target browsers (Chrome, Firefox, Safari/WebKit).</li>
+        <li><strong>Click "Run test"</strong>: Runners spin up on Windows, macOS, and Linux in the cloud and stream results back live.</li>
+        <li><strong>Inspect & Compare</strong>:
+          <ul>
+            <li>Click <strong>⤢ (Maximize)</strong> to pop out into a full-window multi-column comparison studio.</li>
+            <li>Click <strong>Expand all</strong> to view all 9 screenshots side-by-side.</li>
+            <li>Click <strong>any screenshot</strong> to open the full-resolution Lightbox zoom modal.</li>
+          </ul>
+        </li>
+      </ol>
+    </section>
   </main>
 
   <script src="options.js"></script>

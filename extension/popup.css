@@ -76,6 +76,41 @@ body {
   color: var(--text);
 }
 
+/* ---------- setup banner ---------- */
+
+.setup-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(111, 227, 196, 0.1);
+  border: 1px solid var(--accent-dim);
+  border-radius: 0.4rem;
+  padding: 0.45rem 0.65rem;
+  margin-bottom: 0.65rem;
+  font-size: 0.72rem;
+  color: var(--accent);
+}
+
+.setup-banner[hidden] {
+  display: none;
+}
+
+.setup-banner button {
+  background: var(--accent);
+  color: #0b1512;
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.setup-banner button:hover {
+  background: #86ebd1;
+}
+
 /* ---------- target url + run button ---------- */
 
 .target-url {

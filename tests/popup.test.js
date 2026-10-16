@@ -56,6 +56,8 @@ function loadPopupScript({ activeTabUrl = "https://example.com", storedFullPage,
     "run-btn": makeElement("run-btn"),
     "status-line": makeElement("status-line"),
     "settings-btn": makeElement("settings-btn"),
+    "setup-banner": makeElement("setup-banner"),
+    "setup-banner-btn": makeElement("setup-banner-btn"),
     "popout-btn": makeElement("popout-btn"),
     "expand-all-btn": makeElement("expand-all-btn"),
     "fullpage-toggle": makeElement("fullpage-toggle"),
@@ -367,4 +369,16 @@ test("fullscreen lightbox modal: opens on thumbnail click and dismisses on close
   documentMock._fire("keydown", { key: "Escape" });
   assert.equal(elements["lightbox-modal"].hidden, true);
 });
+
+test("setup banner: appears when credentials are missing and clicking configure opens options page", async () => {
+  const { elements, getOpenOptionsPageCalls } = loadPopupScript();
+  elements["setup-banner"].hidden = true;
+  await flushMicrotasks();
+
+  assert.equal(elements["setup-banner"].hidden, false, "setup banner should be visible when credentials missing");
+
+  elements["setup-banner-btn"]._fire("click");
+  assert.equal(getOpenOptionsPageCalls(), 1, "clicking configure should open options page");
+});
+
 
