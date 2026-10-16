@@ -11,6 +11,23 @@
 
 ## Overview
 
+> [!IMPORTANT]
+> ### 💡 Critical FAQ: Does my repository need to be Public? Will I be charged?
+> **No! It works on both Public and Private repositories for $0, and GitHub will never charge your card.**
+>
+> | Repository Type | Operating Systems Available | Monthly Minutes | Privacy |
+> | :--- | :--- | :--- | :--- |
+> | **Public Repository** | Windows, macOS, Linux | **Unlimited & Free ($0)** | Screenshots on `results` branch are public |
+> | **Private Repository** | Windows, macOS, Linux | **2,000 Free minutes / month** | **100% Private** (only you can see screenshots & URLs) |
+>
+> - **Can private repos run macOS and Windows for free?** Yes! Standard `windows-latest` and `macos-latest` runners are available to all free GitHub accounts on private repositories.
+> - **The macOS Quota Multiplier (Private Repos Only)**: On private repositories, Linux consumes 1× quota, Windows consumes 2×, and macOS consumes 10× (1 minute of Mac run time = 10 minutes from your 2,000-minute allowance). Your 2,000 free monthly minutes provide ~200 real minutes of macOS runs (~50 to 100 complete test runs).
+> - **Zero Surprise Charges**: Every GitHub account comes with a default **$0.00 spending limit**. If you ever run out of free minutes, workflows simply pause until the next month. GitHub will **never** charge your card without you explicitly configuring a paid spending limit.
+>
+> **Recommendation:**
+> - **Keep it Private** if you are testing client projects, staging environments, or internal apps and want privacy.
+> - **Make it Public** if you test hundreds of times a day and want unlimited free runner minutes.
+
 ### What problem does this solve?
 
 A website can look slightly different depending on the computer it's
