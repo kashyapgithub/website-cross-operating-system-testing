@@ -22,33 +22,27 @@ services usually cost money.
 This project does the same thing, but for free, using a trick most
 people don't know about yet.
 
-### The trick: GitHub already owns free computers you can borrow
+### Where does the ability to test different operating systems come from?
 
-When you create a project on GitHub, GitHub gives you access to
-**"Actions"** — a feature that lets you run code on real, temporary
-computers in GitHub's data centers, for free, up to a generous monthly
-limit. People normally use this to automatically test their code every
-time they save it. This project points that same feature at a *website*
-instead of at code, and takes a screenshot with it.
+Your own computer doesn't need to run Windows or macOS. Instead, this project borrows **real, cloud-hosted computers directly from GitHub**:
+
+- **Windows (`windows-latest`)**: Real Windows Server virtual machines hosted in Microsoft Azure data centers.
+- **macOS (`macos-latest`)**: Genuine **Apple Mac hardware** hosted in GitHub's data centers, rendering fonts and styling using macOS's native graphics engine.
+- **Linux (`ubuntu-latest`)**: High-performance Ubuntu Linux cloud runners.
+
+Commercial testing platforms (such as BrowserStack, SauceLabs, or LambdaTest) charge between $30 and $150+ every month just to rent access to remote Windows and Mac machines. But GitHub already gives every free account **2,000 free Actions runner minutes every month**. This project repurposes those CI runners into your own private, zero-cost cross-OS and cross-browser device lab.
 
 ### What actually happens, step by step
 
-1. You install a small **Chrome extension** (a mini-program that adds a
-   button to your browser).
-2. You click that button while looking at a webpage.
-3. The extension sends a message to GitHub saying "please start 3
-   computers — one Windows, one Mac, one Linux — and open this URL on
-   each of them."
-4. GitHub spins up those 3 computers (this takes a minute or two).
-5. Each computer opens the page using a tool called **Playwright** (code
-   that can control a web browser automatically) and takes a screenshot.
-6. Each computer saves its screenshot into your GitHub project.
-7. The extension keeps checking GitHub every few seconds — "is the
-   screenshot ready yet?" — and shows each one in its popup the moment
-   it appears.
+1. You install the small **Chrome extension** in your browser.
+2. You open any website, pick which browsers you want to test (**Chrome**, **Firefox**, **Safari / WebKit**), and click **Run test**.
+3. The extension sends a lightweight message (`repository_dispatch`) to your GitHub repository saying: *"Spin up 3 computers — Windows, Mac, and Linux — and capture this URL."*
+4. GitHub boots those runners in parallel in its cloud data centers.
+5. On each machine, **Playwright** launches the native browser engines on that operating system, navigates to your page, and captures pixel-perfect screenshots.
+6. As each browser finishes, the runner commits the PNG directly to your repo's `results` branch.
+7. The extension popup polls your GitHub repo and streams in each preview image the moment it is committed.
 
-You never touch a Windows or Mac computer yourself. GitHub's computers do
-the work; your extension just asks for it and shows you the result.
+You never have to maintain or touch a Windows or Mac computer yourself — GitHub's cloud does all the heavy lifting.
 
 ### A few words you'll see a lot, explained simply
 
@@ -114,20 +108,45 @@ paying for BrowserStack, LambdaTest, or any device farm.
 
 ## How
 
-GitHub gives every repo free, real OS runners for CI. This project just
-points that at your website instead of at test suites.
+## How it works: Free multi-OS & multi-browser cloud infrastructure
+
+Instead of paying a commercial provider for remote testing VMs, this project leverages GitHub's cloud CI infrastructure:
 
 ```mermaid
-flowchart LR
-    A["🧩 Extension popup<br/>Run test"] -->|dispatches| B["⚙️ GitHub Actions<br/>3 OS runners, parallel"]
-    B -->|Playwright| C["🖥️ Windows"]
-    B -->|Playwright| D["🍎 macOS"]
-    B -->|Playwright| E["🐧 Linux"]
-    C & D & E -->|commit PNGs| F["📦 results branch"]
-    F -->|polls & renders| A
+flowchart TD
+    subgraph Local["Your Local Machine (Any OS)"]
+        UI["🧩 Chrome Extension Popup<br/>• Toggle Full page / Viewport<br/>• Select Browsers: Chrome, Firefox, Safari<br/>• Click 'Run test'"]
+    end
+
+    subgraph GitHubCloud["GitHub Actions Cloud Infrastructure"]
+        API["⚡ GitHub API<br/>repository_dispatch: 'cross-os-test'"]
+
+        subgraph ParallelRunners["Parallel GitHub-Hosted Runners"]
+            Win["🖥️ windows-latest<br/>(Real Windows Server VM)<br/>Playwright: Chromium, Firefox, WebKit"]
+            Mac["🍎 macos-latest<br/>(Real Apple Silicon Hardware)<br/>Playwright: Safari, Chromium, Firefox"]
+            Lin["🐧 ubuntu-latest<br/>(Ubuntu Linux Environment)<br/>Playwright: Chromium, Firefox, WebKit"]
+        end
+
+        Storage["📦 results branch<br/>results/&lt;run-tag&gt;/&lt;os&gt;-&lt;browser&gt;.png"]
+    end
+
+    UI -->|1. Dispatches test run with target URL & selected browsers| API
+    API -->|2. Boots 3 cloud runners in parallel| Win
+    API -->|2. Boots 3 cloud runners in parallel| Mac
+    API -->|2. Boots 3 cloud runners in parallel| Lin
+
+    Win -->|3. Commits screenshot as each browser finishes| Storage
+    Mac -->|3. Commits screenshot as each browser finishes| Storage
+    Lin -->|3. Commits screenshot as each browser finishes| Storage
+
+    Storage -->|4. Polls & streams previews live into popup| UI
 ```
 
-No server to host. No paid API. Your GitHub account is the whole backend.
+### Why this works so well
+
+- **Authentic font and layout rendering**: Rather than trying to emulate or spoof user agents, screenshots are captured on **real Windows Server VMs** and **real Apple Mac hardware**. On macOS, font smoothing, subpixel rendering, and WebKit/Safari behavior match actual Mac machines.
+- **Efficient runner utilization**: Each OS runner boots once and handles the requested browsers sequentially, meaning you get all requested browsers on that OS without multiplying VM boots or wasting your 2,000 free monthly Actions quota.
+- **Serverless & free**: No backend server to host, no database to maintain, and zero subscriptions. Your GitHub account is the entire test lab.
 
 ## What it looks like
 
