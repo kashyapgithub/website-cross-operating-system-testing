@@ -10,8 +10,16 @@ const currentUrlEl = document.getElementById("current-url");
 const runBtn = document.getElementById("run-btn");
 const statusLine = document.getElementById("status-line");
 const settingsBtn = document.getElementById("settings-btn");
+const popoutBtn = document.getElementById("popout-btn");
+const expandAllBtn = document.getElementById("expand-all-btn");
 const fullPageToggle = document.getElementById("fullpage-toggle");
 const fullPageToggleLabel = document.getElementById("fullpage-toggle-label");
+
+const lightboxModal = document.getElementById("lightbox-modal");
+const lightboxBackdrop = document.getElementById("lightbox-backdrop");
+const lightboxClose = document.getElementById("lightbox-close");
+const lightboxTitle = document.getElementById("lightbox-title");
+const lightboxImg = document.getElementById("lightbox-img");
 
 const browserCheckboxes = {
   chromium: document.getElementById("browser-chromium"),
@@ -98,6 +106,49 @@ const resetBench = () => {
       }
     }
   });
+  if (expandAllBtn) {
+    expandAllBtn.textContent = "Expand all";
+  }
+};
+
+const openLightbox = (title, src) => {
+  if (!lightboxModal) return;
+  if (lightboxTitle) lightboxTitle.textContent = title;
+  if (lightboxImg) lightboxImg.src = src;
+  lightboxModal.hidden = false;
+};
+
+const closeLightbox = () => {
+  if (!lightboxModal) return;
+  lightboxModal.hidden = true;
+  if (lightboxImg) lightboxImg.src = "";
+};
+
+const toggleExpandAll = () => {
+  const visibleSlots = Object.values(slotByLabel).filter((slot) => slot && !slot.hidden);
+  const thumbs = visibleSlots
+    .map((slot) => slot.querySelector?.(".bench__thumb"))
+    .filter(Boolean);
+
+  if (thumbs.length === 0) return;
+
+  const anyCollapsed = thumbs.some((t) => t.dataset?.expanded !== "true");
+  const targetState = anyCollapsed ? "true" : "false";
+
+  thumbs.forEach((t) => {
+    if (t.dataset) {
+      if (anyCollapsed) {
+        t.dataset.expanded = "true";
+      } else {
+        t.removeAttribute?.("data-expanded");
+        delete t.dataset?.expanded;
+      }
+    }
+  });
+
+  if (expandAllBtn) {
+    expandAllBtn.textContent = anyCollapsed ? "Collapse all" : "Expand all";
+  }
 };
 
 const toggleExpand = (thumb) => {
@@ -115,7 +166,7 @@ const markSlotDone = (label, imageUrl) => {
   if (thumb) {
     thumb.src = imageUrl;
     thumb.hidden = false;
-    thumb.onclick = () => toggleExpand(thumb);
+    thumb.onclick = () => openLightbox(label, imageUrl);
   }
 };
 
@@ -238,6 +289,32 @@ const init = async () => {
   });
 
   updateSlotVisibility();
+
+  // Detect if opened in a full browser tab
+  const isTab = typeof location !== "undefined" && location?.search?.includes("tab=1");
+  if (isTab && typeof document !== "undefined" && document.body?.classList) {
+    document.body.classList.add("is-tab");
+  }
+
+  popoutBtn?.addEventListener?.("click", () => {
+    if (chrome?.tabs?.create) {
+      const url = chrome.runtime?.getURL?.("popup.html?tab=1") || "popup.html?tab=1";
+      chrome.tabs.create({ url });
+    }
+  });
+
+  if (expandAllBtn) {
+    expandAllBtn.textContent = "Expand all";
+  }
+  expandAllBtn?.addEventListener?.("click", toggleExpandAll);
+
+  lightboxClose?.addEventListener?.("click", closeLightbox);
+  lightboxBackdrop?.addEventListener?.("click", closeLightbox);
+  if (typeof document !== "undefined" && document.addEventListener) {
+    document.addEventListener("keydown", (e) => {
+      if (e?.key === "Escape") closeLightbox();
+    });
+  }
 };
 
 init();

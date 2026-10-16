@@ -56,28 +56,56 @@ function loadPopupScript({ activeTabUrl = "https://example.com", storedFullPage,
     "run-btn": makeElement("run-btn"),
     "status-line": makeElement("status-line"),
     "settings-btn": makeElement("settings-btn"),
+    "popout-btn": makeElement("popout-btn"),
+    "expand-all-btn": makeElement("expand-all-btn"),
     "fullpage-toggle": makeElement("fullpage-toggle"),
     "fullpage-toggle-label": makeElement("fullpage-toggle-label"),
     "browser-chromium": makeElement("browser-chromium"),
     "browser-firefox": makeElement("browser-firefox"),
     "browser-webkit": makeElement("browser-webkit"),
+    "lightbox-modal": makeElement("lightbox-modal"),
+    "lightbox-backdrop": makeElement("lightbox-backdrop"),
+    "lightbox-close": makeElement("lightbox-close"),
+    "lightbox-title": makeElement("lightbox-title"),
+    "lightbox-img": makeElement("lightbox-img"),
   };
 
   const slotElements = {
     windows: makeElement("slot-windows"),
+    "windows-firefox": makeElement("slot-windows-firefox"),
+    "windows-webkit": makeElement("slot-windows-webkit"),
+    "macos-webkit": makeElement("slot-macos-webkit"),
     macos: makeElement("slot-macos"),
+    "macos-firefox": makeElement("slot-macos-firefox"),
     linux: makeElement("slot-linux"),
+    "linux-firefox": makeElement("slot-linux-firefox"),
+    "linux-webkit": makeElement("slot-linux-webkit"),
   };
 
+  const docListeners = {};
   const documentMock = {
     getElementById: (id) => elements[id],
     querySelector: (selector) => {
-      const match = selector.match(/data-combo="(\w+)"/);
+      const match = selector.match(/data-combo="([\w-]+)"/);
       return match ? slotElements[match[1]] : null;
+    },
+    addEventListener: (type, fn) => {
+      docListeners[type] = fn;
+    },
+    _fire: (type, payload) => {
+      docListeners[type]?.(payload);
+    },
+    body: {
+      classList: {
+        classes: new Set(),
+        add(c) { this.classes.add(c); },
+        contains(c) { return this.classes.has(c); },
+      },
     },
   };
 
   const connectCalls = [];
+  const tabCreateCalls = [];
   let openOptionsPageCalls = 0;
   const storageSetCalls = [];
   let storedValue = storedFullPage;
@@ -86,6 +114,9 @@ function loadPopupScript({ activeTabUrl = "https://example.com", storedFullPage,
   const chromeMock = {
     tabs: {
       query: async () => [{ url: activeTabUrl }],
+      create: (opts) => {
+        tabCreateCalls.push(opts);
+      },
     },
     storage: {
       local: {
@@ -138,7 +169,9 @@ function loadPopupScript({ activeTabUrl = "https://example.com", storedFullPage,
   return {
     elements,
     slotElements,
+    documentMock,
     connectCalls,
+    getTabCreateCalls: () => tabCreateCalls,
     getOpenOptionsPageCalls: () => openOptionsPageCalls,
     getStorageSetCalls: () => storageSetCalls,
   };
@@ -265,3 +298,73 @@ test("browser toggles: shows error and halts if all browsers are unchecked", asy
   assert.equal(connectCalls.length, 0, "should not connect when no browsers are selected");
   assert.match(elements["status-line"].textContent, /at least one browser/i);
 });
+
+test("popout button: opens popup.html in a new tab via chrome.tabs.create", async () => {
+  const { elements, getTabCreateCalls } = loadPopupScript();
+  await flushMicrotasks();
+
+  elements["popout-btn"]._fire("click");
+
+  const calls = getTabCreateCalls();
+  assert.equal(calls.length, 1, "should call chrome.tabs.create once");
+  assert.match(calls[0].url, /popup\.html\?tab=1/, "should pass tab=1 parameter");
+});
+
+test("expand all / collapse all: toggles all active thumbnails between expanded and compact", async () => {
+  const { elements, slotElements } = loadPopupScript();
+  await flushMicrotasks();
+
+  assert.equal(elements["expand-all-btn"].textContent, "Expand all");
+
+  // First click toggles all visible slots to expanded
+  elements["expand-all-btn"]._fire("click");
+  assert.equal(elements["expand-all-btn"].textContent, "Collapse all");
+  assert.equal(slotElements.windows.querySelector(".bench__thumb").dataset.expanded, "true");
+
+  // Second click collapses all slots back
+  elements["expand-all-btn"]._fire("click");
+  assert.equal(elements["expand-all-btn"].textContent, "Expand all");
+  assert.equal(slotElements.windows.querySelector(".bench__thumb").dataset.expanded, undefined);
+});
+
+test("fullscreen lightbox modal: opens on thumbnail click and dismisses on close button or Escape", async () => {
+  const { elements, slotElements, connectCalls, documentMock } = loadPopupScript();
+  await flushMicrotasks();
+
+  elements["run-btn"]._fire("click");
+  await flushMicrotasks();
+
+  // Background reports COMBO_READY
+  const { port } = connectCalls[0];
+  port.onMessage.listener({
+    type: "COMBO_READY",
+    label: "Windows · Chrome",
+    imageUrl: "data:image/png;base64,FAKEIMAGE123",
+  });
+
+  const thumb = slotElements.windows.querySelector(".bench__thumb");
+  assert.equal(thumb.hidden, false);
+  assert.equal(thumb.src, "data:image/png;base64,FAKEIMAGE123");
+
+  // Lightbox should initially be hidden
+  elements["lightbox-modal"].hidden = true;
+
+  // Clicking thumbnail opens lightbox
+  thumb.onclick();
+  assert.equal(elements["lightbox-modal"].hidden, false);
+  assert.equal(elements["lightbox-title"].textContent, "Windows · Chrome");
+  assert.equal(elements["lightbox-img"].src, "data:image/png;base64,FAKEIMAGE123");
+
+  // Clicking close button dismisses lightbox
+  elements["lightbox-close"]._fire("click");
+  assert.equal(elements["lightbox-modal"].hidden, true);
+
+  // Clicking thumbnail opens it again
+  thumb.onclick();
+  assert.equal(elements["lightbox-modal"].hidden, false);
+
+  // Pressing Escape dismisses lightbox
+  documentMock._fire("keydown", { key: "Escape" });
+  assert.equal(elements["lightbox-modal"].hidden, true);
+});
+
