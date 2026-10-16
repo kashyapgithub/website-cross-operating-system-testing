@@ -118,21 +118,40 @@ installed on your computer, and [Google Chrome](https://www.google.com/chrome/).
 
 ---
 
-### How to Test Any UI (Daily Workflow)
+### How to Test Any UI (Dual Testing Options in the UI)
 
-1. **Browse to any webpage** you want to test in Chrome (`http://` or `https://`, including staging environments and tunnels).
-2. **Open the extension popup**: Click the Cross-OS icon in your browser toolbar.
-3. **Configure your test run**:
-   - **Capture mode**: Toggle between **Full page** (entire scrollable length) or **Visible area only** (viewport).
-   - **Browsers**: Select which engines to test (**Chrome**, **Firefox**, **Safari / WebKit**).
-4. **Click "Run test"**:
-   - A single message dispatches to GitHub Actions.
-   - Runners on Windows, macOS, and Linux boot in parallel and capture screenshots.
-   - Results stream back live into the popup as each operating system finishes!
-5. **Inspect & Compare Results**:
-   - **Pop out to Full Tab (`⤢`)**: Click the maximize button in the header to expand the popup into a full-width desktop comparison studio with a multi-column grid.
-   - **Expand All / Collapse All**: Click the master toggle to view all 9 screenshots enlarged simultaneously.
-   - **Fullscreen Lightbox**: Click any screenshot thumbnail to open a high-resolution modal with pan, zoom, and `Escape` / `✕` close controls.
+You can test any web UI using **either of two modes**, selectable directly via tabs in the extension popup:
+
+```
+[ 🌐 Live Webpage ]    [ 📁 GitHub Repo ]
+```
+
+#### Option 1: Live Webpage Mode (Hosted URL)
+- **Use Case**: Testing live websites, staging URLs, Netlify/Vercel previews, or local dev tunnels (e.g. ngrok, Cloudflare Tunnel).
+- **How it works**:
+  1. Open the website in Google Chrome.
+  2. Click the Cross-OS Tester extension icon (the current URL is auto-detected).
+  3. Choose Full page vs. Viewport, select target browsers, and click **Run test**.
+
+#### Option 2: Direct GitHub Repo Mode (No Hosting Required!)
+- **Use Case**: Testing HTML/CSS/JS or demo sites directly from your repository without deploying to any public web host!
+- **How it works**:
+  1. Commit your HTML, CSS, assets, or static demo to your GitHub repository (e.g. `docs/index.html` or `index.html`).
+  2. In the extension popup, click the **📁 GitHub Repo** tab.
+  3. Specify the file path inside your repository (e.g. `docs/index.html` or `dist/index.html`).
+  4. Click **Run test**:
+     - The cloud runners checkout your repository.
+     - A zero-dependency local static HTTP server boots on the runner (`http://127.0.0.1:3000`).
+     - Playwright tests and screenshots your actual committed files natively across Windows, macOS, and Linux without needing any public deployment!
+
+---
+
+### Inspecting & Comparing Results
+
+Once runners finish, inspect your results in three ways:
+- **Pop out to Full Tab (`⤢`)**: Expands the popup into a full-screen desktop comparison studio with a multi-column responsive grid.
+- **Expand All / Collapse All**: Master toggle to enlarge all 9 screenshot cards simultaneously side-by-side.
+- **Fullscreen Lightbox**: Click any screenshot thumbnail to open a high-resolution modal with pan, zoom, and `Escape` / `✕` close controls.
 
 ---
 

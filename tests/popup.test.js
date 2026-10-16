@@ -20,15 +20,40 @@ const SOURCE = fs.readFileSync(SOURCE_PATH, "utf8");
 /** A minimal fake DOM element supporting exactly what popup.js actually touches. */
 function makeElement(id) {
   const listeners = {};
+  const classes = new Set();
+  const attributes = {};
   return {
     id,
+    value: id === "repo-path-input" ? "docs/index.html" : "",
     textContent: "",
     hidden: false,
     disabled: false,
     checked: true, // fullpage-toggle defaults checked, matches the real HTML
     dataset: {},
     onclick: null,
+    classList: {
+      toggle(cls, force) {
+        if (force === undefined) {
+          if (classes.has(cls)) classes.delete(cls);
+          else classes.add(cls);
+        } else if (force) {
+          classes.add(cls);
+        } else {
+          classes.delete(cls);
+        }
+      },
+      add(cls) { classes.add(cls); },
+      remove(cls) { classes.delete(cls); },
+      contains(cls) { return classes.has(cls); },
+    },
+    setAttribute(name, val) {
+      attributes[name] = String(val);
+    },
+    getAttribute(name) {
+      return attributes[name];
+    },
     removeAttribute(name) {
+      delete attributes[name];
       delete this.dataset[name.replace(/^data-/, "")];
     },
     querySelector(selector) {
@@ -50,7 +75,7 @@ function makeElement(id) {
  * Loads popup.js in a sandbox with a fake DOM/chrome, and returns the
  * elements + a way to fetch messages sent over the mocked port.
  */
-function loadPopupScript({ activeTabUrl = "https://example.com", storedFullPage, storedBrowsers } = {}) {
+function loadPopupScript({ activeTabUrl = "https://example.com", storedFullPage, storedBrowsers, storedTestMode, storedRepoPath } = {}) {
   const elements = {
     "current-url": makeElement("current-url"),
     "run-btn": makeElement("run-btn"),
@@ -58,6 +83,11 @@ function loadPopupScript({ activeTabUrl = "https://example.com", storedFullPage,
     "settings-btn": makeElement("settings-btn"),
     "setup-banner": makeElement("setup-banner"),
     "setup-banner-btn": makeElement("setup-banner-btn"),
+    "mode-url-btn": makeElement("mode-url-btn"),
+    "mode-repo-btn": makeElement("mode-repo-btn"),
+    "panel-url": makeElement("panel-url"),
+    "panel-repo": makeElement("panel-repo"),
+    "repo-path-input": makeElement("repo-path-input"),
     "popout-btn": makeElement("popout-btn"),
     "expand-all-btn": makeElement("expand-all-btn"),
     "fullpage-toggle": makeElement("fullpage-toggle"),
@@ -112,6 +142,8 @@ function loadPopupScript({ activeTabUrl = "https://example.com", storedFullPage,
   const storageSetCalls = [];
   let storedValue = storedFullPage;
   let storedBrowsersValue = storedBrowsers;
+  let storedTestModeValue = storedTestMode;
+  let storedRepoPathValue = storedRepoPath;
 
   const chromeMock = {
     tabs: {
@@ -126,12 +158,16 @@ function loadPopupScript({ activeTabUrl = "https://example.com", storedFullPage,
           const res = {};
           if (storedValue !== undefined) res.fullPage = storedValue;
           if (storedBrowsersValue !== undefined) res.selectedBrowsers = storedBrowsersValue;
+          if (storedTestModeValue !== undefined) res.testMode = storedTestModeValue;
+          if (storedRepoPathValue !== undefined) res.repoPath = storedRepoPathValue;
           return res;
         },
         set: async (obj) => {
           storageSetCalls.push(obj);
           if ("fullPage" in obj) storedValue = obj.fullPage;
           if ("selectedBrowsers" in obj) storedBrowsersValue = obj.selectedBrowsers;
+          if ("testMode" in obj) storedTestModeValue = obj.testMode;
+          if ("repoPath" in obj) storedRepoPathValue = obj.repoPath;
         },
       },
     },
@@ -380,5 +416,48 @@ test("setup banner: appears when credentials are missing and clicking configure 
   elements["setup-banner-btn"]._fire("click");
   assert.equal(getOpenOptionsPageCalls(), 1, "clicking configure should open options page");
 });
+
+test("mode switching: switches between URL and Repo modes, toggling panels and saving state", async () => {
+  const { elements, getStorageSetCalls } = loadPopupScript();
+  await flushMicrotasks();
+
+  // Initially in URL mode
+  assert.equal(elements["panel-url"].hidden, false);
+  assert.equal(elements["panel-repo"].hidden, true);
+
+  // Switch to Repo mode
+  elements["mode-repo-btn"]._fire("click");
+  assert.equal(elements["panel-url"].hidden, true);
+  assert.equal(elements["panel-repo"].hidden, false);
+
+  const calls = getStorageSetCalls();
+  const modeCall = calls.find((c) => c.testMode === "repo");
+  assert.ok(modeCall, "should persist testMode 'repo'");
+
+  // Switch back to URL mode
+  elements["mode-url-btn"]._fire("click");
+  assert.equal(elements["panel-url"].hidden, false);
+  assert.equal(elements["panel-repo"].hidden, true);
+});
+
+test("repo mode: dispatches testMode 'repo' and repoPath in START message even on non-http tab", async () => {
+  const { elements, connectCalls } = loadPopupScript({ activeTabUrl: "chrome://newtab" });
+  await flushMicrotasks();
+
+  // Switch to repo mode
+  elements["mode-repo-btn"]._fire("click");
+  elements["repo-path-input"].value = "docs/index.html";
+
+  // Clicking run test should succeed even though activeTabUrl is chrome://newtab!
+  elements["run-btn"]._fire("click");
+  await flushMicrotasks();
+
+  assert.equal(connectCalls.length, 1, "should connect port successfully in repo mode");
+  const startMsg = connectCalls[0].port.messagesSent.find((m) => m.type === "START");
+  assert.ok(startMsg);
+  assert.equal(startMsg.testMode, "repo");
+  assert.equal(startMsg.repoPath, "docs/index.html");
+});
+
 
 

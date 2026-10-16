@@ -52,8 +52,27 @@ const getCredentials = async () => {
   return hasAllFields ? { githubPat, repoOwner, repoName } : null;
 };
 
-const triggerWorkflow = async ({ githubPat, repoOwner, repoName }, targetUrl, runTag, fullPage, browserList) => {
-  const browsers = Array.isArray(browserList) && browserList.length > 0 ? browserList.join(",") : "chromium";
+const triggerWorkflow = async (credentials, optionsOrTargetUrl, ...rest) => {
+  let opts = {};
+  if (typeof optionsOrTargetUrl === "object" && optionsOrTargetUrl !== null) {
+    opts = optionsOrTargetUrl;
+  } else {
+    opts = {
+      targetUrl: optionsOrTargetUrl,
+      runTag: rest[0],
+      fullPage: rest[1],
+      browserList: rest[2],
+    };
+  }
+
+  const { githubPat, repoOwner, repoName } = credentials;
+  const testMode = opts.testMode || (opts.targetUrl ? "url" : "repo");
+  const targetUrl = opts.targetUrl || "";
+  const repoPath = opts.repoPath || "index.html";
+  const runTag = opts.runTag;
+  const fullPage = opts.fullPage !== false;
+  const browsers = Array.isArray(opts.browserList) && opts.browserList.length > 0 ? opts.browserList.join(",") : "chromium";
+
   let response;
   try {
     response = await fetch(`${GITHUB_API}/repos/${repoOwner}/${repoName}/dispatches`, {
@@ -66,7 +85,9 @@ const triggerWorkflow = async ({ githubPat, repoOwner, repoName }, targetUrl, ru
       body: JSON.stringify({
         event_type: "cross-os-test",
         client_payload: {
+          test_mode: testMode,
           target_url: targetUrl,
+          repo_path: repoPath,
           run_tag: runTag,
           full_page: fullPage,
           browsers,
@@ -193,7 +214,14 @@ const handleConnection = (port) => {
 
     try {
       port.postMessage({ type: "TRIGGERED", combinations: activeCombinations });
-      await triggerWorkflow(credentials, message.targetUrl, runTag, message.fullPage, browserList);
+      await triggerWorkflow(credentials, {
+        testMode: message.testMode || "url",
+        targetUrl: message.targetUrl,
+        repoPath: message.repoPath,
+        runTag,
+        fullPage: message.fullPage,
+        browserList,
+      });
       await pollAndStream(port, credentials, runTag, () => aborted, activeCombinations);
     } catch (err) {
       // The port may already be gone if the popup closed mid-request —

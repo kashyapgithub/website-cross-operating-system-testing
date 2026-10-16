@@ -111,15 +111,90 @@ body {
   background: #86ebd1;
 }
 
-/* ---------- target url + run button ---------- */
+/* ---------- mode selector (live webpage vs github repo) ---------- */
+
+.mode-selector {
+  display: flex;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  padding: 0.18rem;
+  gap: 0.2rem;
+  margin-bottom: 0.65rem;
+}
+
+.mode-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.35rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.mode-btn:hover {
+  color: var(--text);
+}
+
+.mode-btn.is-active {
+  background: rgba(111, 227, 196, 0.12);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.mode-panel {
+  margin-bottom: 0.65rem;
+}
+
+.mode-panel[hidden] {
+  display: none;
+}
 
 .target-url {
   font-family: var(--font-label);
   font-size: 0.7rem;
   color: var(--text-muted);
-  margin: 0 0 0.6rem;
+  margin: 0;
   word-break: break-all;
   line-height: 1.4;
+}
+
+.repo-target-box {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.repo-target-label {
+  font-family: var(--font-label);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.repo-path-input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-family: var(--font-label);
+  font-size: 0.72rem;
+  outline: none;
+  padding: 0;
+}
+
+.repo-path-input::placeholder {
+  color: #55596b;
 }
 
 .capture-toggle {

@@ -20,7 +20,34 @@
       <button id="setup-banner-btn" type="button">Configure</button>
     </div>
 
-    <p id="current-url" class="target-url"></p>
+    <div class="mode-selector" role="tablist" aria-label="Select Test Target">
+      <button id="mode-url-btn" class="mode-btn is-active" type="button" role="tab" aria-selected="true">
+        🌐 Live Webpage
+      </button>
+      <button id="mode-repo-btn" class="mode-btn" type="button" role="tab" aria-selected="false">
+        📁 GitHub Repo
+      </button>
+    </div>
+
+    <!-- Mode 1: Live Webpage Panel -->
+    <div id="panel-url" class="mode-panel">
+      <p id="current-url" class="target-url"></p>
+    </div>
+
+    <!-- Mode 2: Direct GitHub Repo Panel -->
+    <div id="panel-repo" class="mode-panel" hidden>
+      <div class="repo-target-box">
+        <label for="repo-path-input" class="repo-target-label">File in repo:</label>
+        <input
+          id="repo-path-input"
+          class="repo-path-input"
+          type="text"
+          placeholder="docs/index.html or index.html"
+          value="docs/index.html"
+          spellcheck="false"
+        />
+      </div>
+    </div>
 
     <label class="capture-toggle" for="fullpage-toggle">
       <input id="fullpage-toggle" type="checkbox" checked />

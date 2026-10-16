@@ -17,6 +17,13 @@ const expandAllBtn = document.getElementById("expand-all-btn");
 const fullPageToggle = document.getElementById("fullpage-toggle");
 const fullPageToggleLabel = document.getElementById("fullpage-toggle-label");
 
+const modeUrlBtn = document.getElementById("mode-url-btn");
+const modeRepoBtn = document.getElementById("mode-repo-btn");
+const panelUrl = document.getElementById("panel-url");
+const panelRepo = document.getElementById("panel-repo");
+const repoPathInput = document.getElementById("repo-path-input");
+let currentTestMode = "url";
+
 const lightboxModal = document.getElementById("lightbox-modal");
 const lightboxBackdrop = document.getElementById("lightbox-backdrop");
 const lightboxClose = document.getElementById("lightbox-close");
@@ -172,6 +179,24 @@ const markSlotDone = (label, imageUrl) => {
   }
 };
 
+const setTestMode = (mode, shouldPersist = false) => {
+  currentTestMode = mode;
+  if (modeUrlBtn) {
+    modeUrlBtn.classList?.toggle?.("is-active", mode === "url");
+    modeUrlBtn.setAttribute?.("aria-selected", String(mode === "url"));
+  }
+  if (modeRepoBtn) {
+    modeRepoBtn.classList?.toggle?.("is-active", mode === "repo");
+    modeRepoBtn.setAttribute?.("aria-selected", String(mode === "repo"));
+  }
+  if (panelUrl) panelUrl.hidden = mode !== "url";
+  if (panelRepo) panelRepo.hidden = mode !== "repo";
+
+  if (shouldPersist) {
+    chrome.storage?.local?.set?.({ testMode: mode });
+  }
+};
+
 const handleRunClick = async () => {
   // Disabled synchronously, before any await — an async function yields
   // control back to the browser at the first `await`, so a fast double-
@@ -181,12 +206,24 @@ const handleRunClick = async () => {
   if (runBtn.disabled) return;
   runBtn.disabled = true;
 
-  const targetUrl = await getActiveTabUrl();
+  let targetUrl = "";
+  let repoPath = "docs/index.html";
 
-  if (!/^https?:\/\//.test(targetUrl)) {
-    setStatus("This isn't a testable web page — open a real http(s) site first.", "error");
-    runBtn.disabled = false;
-    return;
+  if (currentTestMode === "url") {
+    targetUrl = await getActiveTabUrl();
+
+    if (!/^https?:\/\//.test(targetUrl)) {
+      setStatus("This isn't a testable web page — open a real http(s) site first, or switch to '📁 GitHub Repo' mode.", "error");
+      runBtn.disabled = false;
+      return;
+    }
+  } else {
+    repoPath = repoPathInput?.value?.trim() || "docs/index.html";
+    if (!repoPath) {
+      setStatus("Please enter a file path inside your repository (e.g. docs/index.html).", "error");
+      runBtn.disabled = false;
+      return;
+    }
   }
 
   const selectedBrowsers = getSelectedBrowsers();
@@ -197,7 +234,7 @@ const handleRunClick = async () => {
   }
 
   resetBench();
-  setStatus("Starting run…");
+  setStatus(currentTestMode === "repo" ? `Starting repo test for "${repoPath}"…` : "Starting run…");
 
   const port = chrome.runtime.connect({ name: "cross-os-test" });
 
@@ -241,7 +278,9 @@ const handleRunClick = async () => {
 
   port.postMessage({
     type: "START",
+    testMode: currentTestMode,
     targetUrl,
+    repoPath,
     fullPage: fullPageToggle ? fullPageToggle.checked : true,
     browsers: selectedBrowsers,
   });
@@ -298,6 +337,20 @@ const init = async () => {
   });
 
   updateSlotVisibility();
+
+  // Mode selection & repo path inputs
+  modeUrlBtn?.addEventListener?.("click", () => setTestMode("url", true));
+  modeRepoBtn?.addEventListener?.("click", () => setTestMode("repo", true));
+  repoPathInput?.addEventListener?.("change", () => {
+    const val = repoPathInput.value?.trim();
+    if (val) chrome.storage?.local?.set?.({ repoPath: val });
+  });
+
+  const { testMode, repoPath } = await chrome.storage.local.get(["testMode", "repoPath"]);
+  setTestMode(testMode || "url", false);
+  if (repoPath && repoPathInput) {
+    repoPathInput.value = repoPath;
+  }
 
   // Detect if opened in a full browser tab
   const isTab = typeof location !== "undefined" && location?.search?.includes("tab=1");

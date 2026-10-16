@@ -68,7 +68,9 @@ jobs:
       - name: Capture screenshots and commit to results branch
         shell: bash
         env:
+          TEST_MODE: ${{ github.event.client_payload.test_mode }}
           TARGET_URL: ${{ github.event.client_payload.target_url }}
+          REPO_PATH: ${{ github.event.client_payload.repo_path }}
           FULL_PAGE: ${{ github.event.client_payload.full_page }}
           RUN_TAG: ${{ github.event.client_payload.run_tag }}
           BROWSERS: ${{ github.event.client_payload.browsers }}
@@ -78,6 +80,19 @@ jobs:
             macOS)   OS_LABEL="macos" ;;
             *)       OS_LABEL="linux" ;;
           esac
+
+          if [ "$TEST_MODE" = "repo" ] || [ -z "$TARGET_URL" ]; then
+            echo "Direct repo test mode active. Starting local static server on port 3000..."
+            node scripts/serve.js 3000 . &
+            SERVER_PID=$!
+            sleep 2
+            CLEAN_PATH="${REPO_PATH:-index.html}"
+            CLEAN_PATH="${CLEAN_PATH#/}"
+            EFFECTIVE_URL="http://127.0.0.1:3000/${CLEAN_PATH}"
+          else
+            EFFECTIVE_URL="$TARGET_URL"
+          fi
+          echo "Target test URL: $EFFECTIVE_URL"
 
           DEST_DIR="results-branch/results/${RUN_TAG}"
           mkdir -p "${DEST_DIR}"
@@ -94,7 +109,7 @@ jobs:
 
             echo "Capturing $browser on $OS_LABEL..."
             OUTPUT_FILE="screenshot-${OS_LABEL}-${browser}.png"
-            if BROWSER="$browser" OUTPUT_PATH="$OUTPUT_FILE" node scripts/capture.js; then
+            if TARGET_URL="$EFFECTIVE_URL" BROWSER="$browser" OUTPUT_PATH="$OUTPUT_FILE" node scripts/capture.js; then
               if [ -f "$OUTPUT_FILE" ]; then
                 cp "$OUTPUT_FILE" "${DEST_DIR}/${OS_LABEL}-${browser}.png"
 
