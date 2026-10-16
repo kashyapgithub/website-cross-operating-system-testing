@@ -17,11 +17,27 @@
 
 const GITHUB_API = "https://api.github.com";
 
-const TEST_COMBINATIONS = [
+const ALL_TEST_COMBINATIONS = [
   { os: "windows", browser: "chromium", label: "Windows · Chrome" },
+  { os: "windows", browser: "firefox", label: "Windows · Firefox" },
+  { os: "windows", browser: "webkit", label: "Windows · WebKit" },
+  { os: "macos", browser: "webkit", label: "macOS · Safari" },
   { os: "macos", browser: "chromium", label: "macOS · Chrome" },
+  { os: "macos", browser: "firefox", label: "macOS · Firefox" },
   { os: "linux", browser: "chromium", label: "Linux · Chrome" },
+  { os: "linux", browser: "firefox", label: "Linux · Firefox" },
+  { os: "linux", browser: "webkit", label: "Linux · WebKit" },
 ];
+
+const TEST_COMBINATIONS = ALL_TEST_COMBINATIONS;
+
+const getActiveCombinations = (browsers) => {
+  if (Array.isArray(browsers) && browsers.length > 0) {
+    return ALL_TEST_COMBINATIONS.filter((combo) => browsers.includes(combo.browser));
+  }
+  // Default to chromium across the 3 OSes if not specified for backwards compatibility
+  return ALL_TEST_COMBINATIONS.filter((combo) => combo.browser === "chromium");
+};
 
 const POLL_INTERVAL_MS = 10_000;
 const POLL_TIMEOUT_MS = 6 * 60 * 1000;
@@ -36,7 +52,8 @@ const getCredentials = async () => {
   return hasAllFields ? { githubPat, repoOwner, repoName } : null;
 };
 
-const triggerWorkflow = async ({ githubPat, repoOwner, repoName }, targetUrl, runTag, fullPage) => {
+const triggerWorkflow = async ({ githubPat, repoOwner, repoName }, targetUrl, runTag, fullPage, browserList) => {
+  const browsers = Array.isArray(browserList) && browserList.length > 0 ? browserList.join(",") : "chromium";
   const response = await fetch(`${GITHUB_API}/repos/${repoOwner}/${repoName}/dispatches`, {
     method: "POST",
     headers: {
@@ -46,7 +63,12 @@ const triggerWorkflow = async ({ githubPat, repoOwner, repoName }, targetUrl, ru
     },
     body: JSON.stringify({
       event_type: "cross-os-test",
-      client_payload: { target_url: targetUrl, run_tag: runTag, full_page: fullPage },
+      client_payload: {
+        target_url: targetUrl,
+        run_tag: runTag,
+        full_page: fullPage,
+        browsers,
+      },
     }),
   });
 
@@ -101,12 +123,12 @@ const arrayBufferToBase64 = (arrayBuffer) => {
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const pollAndStream = async (port, credentials, runTag, isAborted) => {
+const pollAndStream = async (port, credentials, runTag, isAborted, activeCombinations = TEST_COMBINATIONS) => {
   const deadline = Date.now() + POLL_TIMEOUT_MS;
   const found = new Set();
 
-  while (Date.now() < deadline && found.size < TEST_COMBINATIONS.length && !isAborted()) {
-    const pending = TEST_COMBINATIONS.filter((combo) => !found.has(combo.label));
+  while (Date.now() < deadline && found.size < activeCombinations.length && !isAborted()) {
+    const pending = activeCombinations.filter((combo) => !found.has(combo.label));
 
     await Promise.all(
       pending.map(async (combo) => {
@@ -115,11 +137,11 @@ const pollAndStream = async (port, credentials, runTag, isAborted) => {
         if (!imageUrl || isAborted()) return;
 
         found.add(combo.label);
-        port.postMessage({ type: "COMBO_READY", label: combo.label, imageUrl });
+        port.postMessage({ type: "COMBO_READY", label: combo.label, imageUrl, os: combo.os, browser: combo.browser });
       })
     );
 
-    if (found.size < TEST_COMBINATIONS.length && !isAborted()) await wait(POLL_INTERVAL_MS);
+    if (found.size < activeCombinations.length && !isAborted()) await wait(POLL_INTERVAL_MS);
   }
 
   // Popup closed before we finished — nothing left to tell it, and posting
@@ -127,7 +149,7 @@ const pollAndStream = async (port, credentials, runTag, isAborted) => {
   // burning the rest of the 6-minute budget on API calls nobody's watching.
   if (isAborted()) return;
 
-  const timedOut = found.size < TEST_COMBINATIONS.length;
+  const timedOut = found.size < activeCombinations.length;
   port.postMessage({ type: "RUN_FINISHED", timedOut });
 };
 
@@ -147,11 +169,13 @@ const handleConnection = (port) => {
     }
 
     const runTag = `run-${Date.now()}`;
+    const activeCombinations = getActiveCombinations(message.browsers);
+    const browserList = [...new Set(activeCombinations.map((c) => c.browser))];
 
     try {
-      port.postMessage({ type: "TRIGGERED" });
-      await triggerWorkflow(credentials, message.targetUrl, runTag, message.fullPage);
-      await pollAndStream(port, credentials, runTag, () => aborted);
+      port.postMessage({ type: "TRIGGERED", combinations: activeCombinations });
+      await triggerWorkflow(credentials, message.targetUrl, runTag, message.fullPage, browserList);
+      await pollAndStream(port, credentials, runTag, () => aborted, activeCombinations);
     } catch (err) {
       // The port may already be gone if the popup closed mid-request —
       // guard the error report itself so that case doesn't throw a second,

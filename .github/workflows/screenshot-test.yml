@@ -45,61 +45,66 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - name: Install Playwright + Chromium only
-        # npm ci installs the exact pinned version from package-lock.json —
-        # not "whatever's latest today" — so a run in January and a run in
-        # June use the identical Chromium build. For a tool whose entire
-        # point is comparing renders, an unpinned engine would let "the
-        # tool changed" masquerade as "the site changed."
+      - name: Install Playwright and requested browsers
+        env:
+          BROWSERS: ${{ github.event.client_payload.browsers || 'chromium,firefox,webkit' }}
         run: |
           npm ci
-          npx playwright install chromium ${{ runner.os == 'Linux' && '--with-deps' || '' }}
+          INSTALL_BROWSERS=$(echo "$BROWSERS" | tr ',' ' ')
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            npx playwright install --with-deps $INSTALL_BROWSERS
+          else
+            npx playwright install $INSTALL_BROWSERS
+          fi
         shell: bash
-
-      - name: Capture screenshot
-        run: node scripts/capture.js
-        shell: bash
-        env:
-          TARGET_URL: ${{ github.event.client_payload.target_url }}
-          FULL_PAGE: ${{ github.event.client_payload.full_page }}
-          OUTPUT_PATH: screenshot-output.png
 
       - name: Checkout results branch
         uses: actions/checkout@v4
         with:
           ref: results
           path: results-branch
-          # Shallow is enough — this job only ever adds one new commit on
-          # top of the current tip, never reads old history. Fetching
-          # everything here would make this checkout keep getting slower
-          # as the results branch accumulates months of screenshots.
           fetch-depth: 1
 
-      - name: Commit screenshot to results branch
+      - name: Capture screenshots and commit to results branch
         shell: bash
-        # RUN_TAG comes in via `env:`, not `${{ }}` interpolated straight into
-        # this script. repository_dispatch payloads are attacker-influenceable
-        # if a token ever leaks (as very nearly happened earlier), so any
-        # event data touching a shell script goes through an env var, never
-        # directly into the run: block — GitHub's own security guidance calls
-        # out the direct-interpolation pattern as a script-injection risk.
         env:
+          TARGET_URL: ${{ github.event.client_payload.target_url }}
+          FULL_PAGE: ${{ github.event.client_payload.full_page }}
           RUN_TAG: ${{ github.event.client_payload.run_tag }}
+          BROWSERS: ${{ github.event.client_payload.browsers || 'chromium,firefox,webkit' }}
         run: |
-          OS_LABEL="${{ runner.os == 'Windows' && 'windows' || runner.os == 'macOS' && 'macos' || 'linux' }}"
-          DEST_DIR="results-branch/results/${RUN_TAG}"
-          DEST_FILE="${DEST_DIR}/${OS_LABEL}-chromium.png"
+          case "$RUNNER_OS" in
+            Windows) OS_LABEL="windows" ;;
+            macOS)   OS_LABEL="macos" ;;
+            *)       OS_LABEL="linux" ;;
+          esac
 
+          DEST_DIR="results-branch/results/${RUN_TAG}"
           mkdir -p "${DEST_DIR}"
-          cp screenshot-output.png "${DEST_FILE}"
 
           cd results-branch
           git config user.name "cross-os-tester-bot"
           git config user.email "actions@github.com"
-          git add "results/${RUN_TAG}/${OS_LABEL}-chromium.png"
-          git commit -m "Add ${OS_LABEL} screenshot for ${RUN_TAG}"
+          cd ..
 
-          for attempt in 1 2 3 4 5; do
-            git pull --rebase origin results && git push origin results && break
-            sleep 5
+          IFS=',' read -ra BROWSER_LIST <<< "$BROWSERS"
+          for browser in "${BROWSER_LIST[@]}"; do
+            browser=$(echo "$browser" | xargs)
+            if [ -z "$browser" ]; then continue; fi
+
+            echo "Capturing $browser on $OS_LABEL..."
+            OUTPUT_FILE="screenshot-${OS_LABEL}-${browser}.png"
+            BROWSER="$browser" OUTPUT_PATH="$OUTPUT_FILE" node scripts/capture.js
+
+            cp "$OUTPUT_FILE" "${DEST_DIR}/${OS_LABEL}-${browser}.png"
+
+            cd results-branch
+            git add "results/${RUN_TAG}/${OS_LABEL}-${browser}.png"
+            git commit -m "Add ${OS_LABEL}-${browser} screenshot for ${RUN_TAG}"
+
+            for attempt in 1 2 3 4 5; do
+              git pull --rebase origin results && git push origin results && break
+              sleep 5
+            done
+            cd ..
           done

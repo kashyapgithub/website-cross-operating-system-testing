@@ -134,6 +134,53 @@ body {
   color: var(--text-muted);
 }
 
+/* ---------- browser selection pills ---------- */
+
+.browser-toggles {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.browser-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.45rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+
+.browser-pill input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.browser-pill__label {
+  font-size: 0.7rem;
+  font-family: var(--font-label);
+  color: var(--text-muted);
+  transition: color 0.15s ease;
+  white-space: nowrap;
+}
+
+.browser-pill:has(input:checked) {
+  border-color: var(--accent-dim);
+  background: rgba(111, 227, 196, 0.08);
+}
+
+.browser-pill:has(input:checked) .browser-pill__label {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .run-button {
   width: 100%;
   padding: 0.7rem;

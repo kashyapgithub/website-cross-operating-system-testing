@@ -50,7 +50,7 @@ function makeElement(id) {
  * Loads popup.js in a sandbox with a fake DOM/chrome, and returns the
  * elements + a way to fetch messages sent over the mocked port.
  */
-function loadPopupScript({ activeTabUrl = "https://example.com", storedFullPage } = {}) {
+function loadPopupScript({ activeTabUrl = "https://example.com", storedFullPage, storedBrowsers } = {}) {
   const elements = {
     "current-url": makeElement("current-url"),
     "run-btn": makeElement("run-btn"),
@@ -58,6 +58,9 @@ function loadPopupScript({ activeTabUrl = "https://example.com", storedFullPage 
     "settings-btn": makeElement("settings-btn"),
     "fullpage-toggle": makeElement("fullpage-toggle"),
     "fullpage-toggle-label": makeElement("fullpage-toggle-label"),
+    "browser-chromium": makeElement("browser-chromium"),
+    "browser-firefox": makeElement("browser-firefox"),
+    "browser-webkit": makeElement("browser-webkit"),
   };
 
   const slotElements = {
@@ -78,6 +81,7 @@ function loadPopupScript({ activeTabUrl = "https://example.com", storedFullPage 
   let openOptionsPageCalls = 0;
   const storageSetCalls = [];
   let storedValue = storedFullPage;
+  let storedBrowsersValue = storedBrowsers;
 
   const chromeMock = {
     tabs: {
@@ -85,10 +89,16 @@ function loadPopupScript({ activeTabUrl = "https://example.com", storedFullPage 
     },
     storage: {
       local: {
-        get: async (_keys) => (storedValue === undefined ? {} : { fullPage: storedValue }),
+        get: async (_keys) => {
+          const res = {};
+          if (storedValue !== undefined) res.fullPage = storedValue;
+          if (storedBrowsersValue !== undefined) res.selectedBrowsers = storedBrowsersValue;
+          return res;
+        },
         set: async (obj) => {
           storageSetCalls.push(obj);
           if ("fullPage" in obj) storedValue = obj.fullPage;
+          if ("selectedBrowsers" in obj) storedBrowsersValue = obj.selectedBrowsers;
         },
       },
     },
@@ -219,4 +229,39 @@ test("settings button opens the options page", async () => {
   elements["settings-btn"]._fire("click");
 
   assert.equal(getOpenOptionsPageCalls(), 1);
+});
+
+test("browser toggles: saves selected browsers when changed and sends them in START message", async () => {
+  const { elements, connectCalls, getStorageSetCalls } = loadPopupScript();
+  await flushMicrotasks();
+
+  elements["browser-firefox"].checked = false;
+  elements["browser-firefox"]._fire("change");
+
+  const calls = getStorageSetCalls();
+  const browserCall = calls.find((c) => "selectedBrowsers" in c);
+  assert.ok(browserCall);
+  assert.deepEqual([...browserCall.selectedBrowsers], ["chromium", "webkit"]);
+
+  elements["run-btn"]._fire("click");
+  await flushMicrotasks();
+
+  assert.equal(connectCalls.length, 1);
+  const startMsg = connectCalls[0].port.messagesSent.find((m) => m.type === "START");
+  assert.deepEqual([...startMsg.browsers], ["chromium", "webkit"]);
+});
+
+test("browser toggles: shows error and halts if all browsers are unchecked", async () => {
+  const { elements, connectCalls } = loadPopupScript();
+  await flushMicrotasks();
+
+  elements["browser-chromium"].checked = false;
+  elements["browser-firefox"].checked = false;
+  elements["browser-webkit"].checked = false;
+
+  elements["run-btn"]._fire("click");
+  await flushMicrotasks();
+
+  assert.equal(connectCalls.length, 0, "should not connect when no browsers are selected");
+  assert.match(elements["status-line"].textContent, /at least one browser/i);
 });

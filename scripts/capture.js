@@ -10,10 +10,13 @@
 // different real hardware.
 // -----------------------------------------------------------------------------
 
-const { chromium } = require("playwright");
+const { chromium, firefox, webkit } = require("playwright");
 
 const TARGET_URL = process.env.TARGET_URL;
 const OUTPUT_PATH = process.env.OUTPUT_PATH ?? "screenshot-output.png";
+const BROWSER_TYPE = (process.env.BROWSER || "chromium").toLowerCase();
+
+const BROWSERS = { chromium, firefox, webkit };
 
 // GitHub Actions passes booleans through client_payload as the strings
 // "true"/"false" (JSON booleans get stringified for env vars), so this
@@ -32,9 +35,14 @@ const assertTargetUrlProvided = () => {
   }
 };
 
-/** Launches Chromium, navigates to the target, and saves a full-page screenshot. */
+/** Launches the specified browser, navigates to the target, and saves a screenshot. */
 const captureScreenshot = async () => {
-  const browser = await chromium.launch();
+  const launcher = BROWSERS[BROWSER_TYPE];
+  if (!launcher) {
+    throw new Error(`Unsupported browser: "${BROWSER_TYPE}". Supported browsers: ${Object.keys(BROWSERS).join(", ")}`);
+  }
+
+  const browser = await launcher.launch();
   const page = await browser.newPage({ viewport: VIEWPORT });
 
   try {

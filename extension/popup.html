@@ -20,12 +20,28 @@
       <span class="capture-toggle__label" id="fullpage-toggle-label">Full page</span>
     </label>
 
+    <div class="browser-toggles" role="group" aria-label="Select Browsers">
+      <label class="browser-pill">
+        <input id="browser-chromium" type="checkbox" checked />
+        <span class="browser-pill__label">Chrome</span>
+      </label>
+      <label class="browser-pill">
+        <input id="browser-firefox" type="checkbox" checked />
+        <span class="browser-pill__label">Firefox</span>
+      </label>
+      <label class="browser-pill">
+        <input id="browser-webkit" type="checkbox" checked />
+        <span class="browser-pill__label">Safari / WebKit</span>
+      </label>
+    </div>
+
     <button id="run-btn" class="run-button" type="button">Run test</button>
 
     <p id="status-line" class="status-line" role="status"></p>
 
     <ul id="bench-list" class="bench">
-      <li class="bench__slot" data-combo="windows">
+      <!-- Windows combos -->
+      <li class="bench__slot" data-combo="windows" data-browser="chromium">
         <span class="bench__dot bench__dot--windows"></span>
         <div class="bench__info">
           <span class="bench__label">Windows · Chrome</span>
@@ -33,7 +49,33 @@
         </div>
         <img class="bench__thumb" alt="" hidden />
       </li>
-      <li class="bench__slot" data-combo="macos">
+      <li class="bench__slot" data-combo="windows-firefox" data-browser="firefox">
+        <span class="bench__dot bench__dot--windows"></span>
+        <div class="bench__info">
+          <span class="bench__label">Windows · Firefox</span>
+          <span class="bench__state" data-state="idle">Idle</span>
+        </div>
+        <img class="bench__thumb" alt="" hidden />
+      </li>
+      <li class="bench__slot" data-combo="windows-webkit" data-browser="webkit">
+        <span class="bench__dot bench__dot--windows"></span>
+        <div class="bench__info">
+          <span class="bench__label">Windows · WebKit</span>
+          <span class="bench__state" data-state="idle">Idle</span>
+        </div>
+        <img class="bench__thumb" alt="" hidden />
+      </li>
+
+      <!-- macOS combos -->
+      <li class="bench__slot" data-combo="macos-webkit" data-browser="webkit">
+        <span class="bench__dot bench__dot--macos"></span>
+        <div class="bench__info">
+          <span class="bench__label">macOS · Safari</span>
+          <span class="bench__state" data-state="idle">Idle</span>
+        </div>
+        <img class="bench__thumb" alt="" hidden />
+      </li>
+      <li class="bench__slot" data-combo="macos" data-browser="chromium">
         <span class="bench__dot bench__dot--macos"></span>
         <div class="bench__info">
           <span class="bench__label">macOS · Chrome</span>
@@ -41,10 +83,36 @@
         </div>
         <img class="bench__thumb" alt="" hidden />
       </li>
-      <li class="bench__slot" data-combo="linux">
+      <li class="bench__slot" data-combo="macos-firefox" data-browser="firefox">
+        <span class="bench__dot bench__dot--macos"></span>
+        <div class="bench__info">
+          <span class="bench__label">macOS · Firefox</span>
+          <span class="bench__state" data-state="idle">Idle</span>
+        </div>
+        <img class="bench__thumb" alt="" hidden />
+      </li>
+
+      <!-- Linux combos -->
+      <li class="bench__slot" data-combo="linux" data-browser="chromium">
         <span class="bench__dot bench__dot--linux"></span>
         <div class="bench__info">
           <span class="bench__label">Linux · Chrome</span>
+          <span class="bench__state" data-state="idle">Idle</span>
+        </div>
+        <img class="bench__thumb" alt="" hidden />
+      </li>
+      <li class="bench__slot" data-combo="linux-firefox" data-browser="firefox">
+        <span class="bench__dot bench__dot--linux"></span>
+        <div class="bench__info">
+          <span class="bench__label">Linux · Firefox</span>
+          <span class="bench__state" data-state="idle">Idle</span>
+        </div>
+        <img class="bench__thumb" alt="" hidden />
+      </li>
+      <li class="bench__slot" data-combo="linux-webkit" data-browser="webkit">
+        <span class="bench__dot bench__dot--linux"></span>
+        <div class="bench__info">
+          <span class="bench__label">Linux · WebKit</span>
           <span class="bench__state" data-state="idle">Idle</span>
         </div>
         <img class="bench__thumb" alt="" hidden />

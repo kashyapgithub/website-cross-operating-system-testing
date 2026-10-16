@@ -83,7 +83,7 @@ function loadBackgroundScript({ storedCredentials, fetchImpl, clockStepMs = 1 })
   }
 
   /** Simulates the popup opening a port and clicking "Run test". */
-  function simulateRun({ targetUrl = "https://example.com", fullPage = true } = {}) {
+  function simulateRun({ targetUrl = "https://example.com", fullPage = true, browsers } = {}) {
     const messages = [];
     let disconnectHandler = null;
     let isDisconnected = false;
@@ -111,7 +111,7 @@ function loadBackgroundScript({ storedCredentials, fetchImpl, clockStepMs = 1 })
 
     connectedPorts.push(port);
     onConnectHandler(port);
-    port.onMessage.listener({ type: "START", targetUrl, fullPage });
+    port.onMessage.listener({ type: "START", targetUrl, fullPage, browsers });
 
     return {
       messages,
@@ -291,6 +291,34 @@ test("arrayBufferToBase64 round-trips correctly across a chunk boundary (regress
       `size ${size}: decoded bytes should exactly match the original buffer`
     );
   }
+});
+
+test("multi-browser path: streams all 9 combinations across Windows, macOS, and Linux", async () => {
+  const { simulateRun } = loadBackgroundScript({
+    storedCredentials: { githubPat: "pat", repoOwner: "kashyapgithub", repoName: "repo" },
+    fetchImpl: async (url) => {
+      if (url.includes("/dispatches")) {
+        return { ok: true, status: 204 };
+      }
+      if (url.includes("/contents/")) {
+        return { ok: true, status: 200, arrayBuffer: async () => fakeImageBytes(64) };
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    },
+  });
+
+  const { messages } = simulateRun({ browsers: ["chromium", "firefox", "webkit"] });
+  await waitFor(() => messages.some((m) => m.type === "RUN_FINISHED"));
+
+  assert.equal(messages.filter((m) => m.type === "COMBO_READY").length, 9);
+  const labels = messages.filter((m) => m.type === "COMBO_READY").map((m) => m.label);
+  assert.ok(labels.includes("macOS · Safari"));
+  assert.ok(labels.includes("Windows · Firefox"));
+  assert.ok(labels.includes("Linux · WebKit"));
+  assert.ok(labels.includes("Windows · Chrome"));
+
+  const finished = messages.find((m) => m.type === "RUN_FINISHED");
+  assert.equal(finished.timedOut, false);
 });
 
 // ---------------------------------------------------------------------------
