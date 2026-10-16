@@ -103,6 +103,7 @@ jobs:
             git commit -m "Add ${OS_LABEL}-${browser} screenshot for ${RUN_TAG}"
 
             for attempt in 1 2 3 4 5; do
+              echo "Push attempt ${attempt}/5..."
               git pull --rebase origin results && git push origin results && break
               sleep 5
             done

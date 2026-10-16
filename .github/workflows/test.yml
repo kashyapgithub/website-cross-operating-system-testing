@@ -31,8 +31,4 @@ jobs:
       - name: Lint the screenshot workflow
         run: |
           curl -sL "https://github.com/rhysd/actionlint/releases/download/v1.7.7/actionlint_1.7.7_linux_amd64.tar.gz" | tar -xz actionlint
-          OUTPUT=$(./actionlint .github/workflows/*.yml 2>&1) || {
-            echo "::error::Actionlint output: $OUTPUT"
-            echo "$OUTPUT"
-            exit 1
-          }
+          ./actionlint .github/workflows/*.yml
