@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cross-OS & Browser Rendering Benchmark</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card-bg: rgba(26, 29, 39, 0.85);
+      --card-border: #2e3344;
+      --text: #f0f2f8;
+      --text-muted: #8e95ad;
+      --accent: #5ef3c4;
+      --accent-dim: #256a55;
+      --mac-color: #a2a9ba;
+      --win-color: #3aa9f7;
+      --lin-color: #f79838;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 2.5rem;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #ffffff 40%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    /* Live Detector Badge */
+    .env-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 1rem;
+      background: var(--card-bg);
+      border: 1px solid var(--accent-dim);
+      padding: 0.6rem 1.4rem;
+      border-radius: 999px;
+      margin-top: 1rem;
+      font-family: ui-monospace, "SF Mono", Consolas, monospace;
+      font-size: 0.85rem;
+    }
+
+    .env-badge strong {
+      color: var(--accent);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 0.8rem;
+      padding: 1.5rem;
+      backdrop-filter: blur(12px);
+    }
+
+    .card__tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.6rem;
+      display: inline-block;
+    }
+
+    .card__tag--mac { color: var(--mac-color); }
+    .card__tag--win { color: var(--win-color); }
+    .card__tag--lin { color: var(--lin-color); }
+    .card__tag--sys { color: var(--accent); }
+
+    .card h2 {
+      font-size: 1.25rem;
+      margin-bottom: 0.8rem;
+    }
+
+    /* Font Specific Blocks */
+    .font-mac {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", "Helvetica Neue", sans-serif;
+    }
+
+    .font-win {
+      font-family: "Segoe UI Variable Display", "Segoe UI", Tahoma, sans-serif;
+    }
+
+    .font-lin {
+      font-family: "Ubuntu", "Liberation Sans", "DejaVu Sans", sans-serif;
+    }
+
+    .font-mono {
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    .sample-text {
+      font-size: 1.05rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .glyph-set {
+      font-size: 1.25rem;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      word-break: break-all;
+    }
+
+    /* Native Widget Bench */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .control-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .control-item label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    select, input[type="text"], input[type="date"], button {
+      padding: 0.5rem 0.7rem;
+      border-radius: 0.4rem;
+      font-size: 0.9rem;
+    }
+
+    /* Emoji Row */
+    .emoji-row {
+      display: flex;
+      gap: 1.2rem;
+      font-size: 2.2rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    /* Metrics Table */
+    .metrics-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.8rem;
+      font-family: ui-monospace, "SF Mono", Consolas, monospace;
+      font-size: 0.82rem;
+    }
+
+    .metrics-table td, .metrics-table th {
+      padding: 0.5rem;
+      border-bottom: 1px solid var(--card-border);
+      text-align: left;
+    }
+
+    .metrics-table th {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Cross-OS &amp; Browser Benchmark</h1>
+    <p class="subtitle">Real hardware rendering comparison across Windows, macOS, and Linux</p>
+    <div class="env-badge">
+      <span>Detected OS: <strong id="os-name">Detecting…</strong></span>
+      <span>Engine: <strong id="engine-name">Detecting…</strong></span>
+      <span>DPR: <strong id="dpr-val">1</strong></span>
+    </div>
+  </header>
+
+  <main>
+    <div class="grid">
+      <!-- Apple SF Pro Card -->
+      <article class="card font-mac">
+        <span class="card__tag card__tag--mac">Apple Ecosystem</span>
+        <h2>San Francisco (SF Pro)</h2>
+        <p class="sample-text">The quick brown fox jumps over the lazy dog. 1234567890</p>
+        <p class="glyph-set">ABCDEFGHIJKLMabcdefghijklm &amp; @#$QWryzq</p>
+        <div style="margin-top: 1rem; font-size: 0.78rem; color: var(--text-muted);">
+          Renders with Apple Quartz / CoreGraphics subpixel antialiasing and native macOS font smoothing.
+        </div>
+      </article>
+
+      <!-- Microsoft Segoe UI Card -->
+      <article class="card font-win">
+        <span class="card__tag card__tag--win">Microsoft Ecosystem</span>
+        <h2>Segoe UI / Segoe Variable</h2>
+        <p class="sample-text">The quick brown fox jumps over the lazy dog. 1234567890</p>
+        <p class="glyph-set">ABCDEFGHIJKLMabcdefghijklm &amp; @#$QWryzq</p>
+        <div style="margin-top: 1rem; font-size: 0.78rem; color: var(--text-muted);">
+          Renders with Microsoft DirectWrite / ClearType typography and open apertures.
+        </div>
+      </article>
+
+      <!-- Linux Ubuntu / Liberation Card -->
+      <article class="card font-lin">
+        <span class="card__tag card__tag--lin">Linux Ecosystem</span>
+        <h2>Ubuntu / Liberation Sans</h2>
+        <p class="sample-text">The quick brown fox jumps over the lazy dog. 1234567890</p>
+        <p class="glyph-set">ABCDEFGHIJKLMabcdefghijklm &amp; @#$QWryzq</p>
+        <div style="margin-top: 1rem; font-size: 0.78rem; color: var(--text-muted);">
+          Renders with FreeType / Fontconfig hinting and Cairo rendering pipeline.
+        </div>
+      </article>
+    </div>
+
+    <div class="grid">
+      <!-- Native OS UI Form Controls -->
+      <article class="card">
+        <span class="card__tag card__tag--sys">Native Widgets</span>
+        <h2>Operating System Form Controls</h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">These controls use default OS styling without custom appearance overrides:</p>
+        
+        <div class="controls-grid">
+          <div class="control-item">
+            <label for="native-select">Native Dropdown:</label>
+            <select id="native-select">
+              <option>Option Alpha</option>
+              <option>Option Beta</option>
+              <option>Option Gamma</option>
+            </select>
+          </div>
+
+          <div class="control-item">
+            <label for="native-date">Native Datepicker:</label>
+            <input type="date" id="native-date" value="2026-10-16" />
+          </div>
+
+          <div class="control-item">
+            <label>Checkboxes &amp; Radios:</label>
+            <div style="display: flex; gap: 0.8rem; align-items: center; margin-top: 0.2rem;">
+              <label><input type="checkbox" checked /> Checked</label>
+              <label><input type="radio" checked /> Radio</label>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <label for="native-progress">Progress &amp; Range:</label>
+            <progress id="native-progress" value="65" max="100" style="width: 100%;"></progress>
+          </div>
+        </div>
+      </article>
+
+      <!-- Native Emoji Set -->
+      <article class="card">
+        <span class="card__tag card__tag--sys">Emoji Font System</span>
+        <h2>Native Color Emojis</h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Compare Apple Color Emoji vs. Segoe UI Emoji vs. Noto Color Emoji:</p>
+        <div class="emoji-row">
+          <span>🍎</span>
+          <span>🪟</span>
+          <span>🐧</span>
+          <span>🦊</span>
+          <span>🧭</span>
+          <span>🚀</span>
+          <span>💻</span>
+          <span>🎨</span>
+        </div>
+        <div style="margin-top: 1rem; font-size: 0.78rem; color: var(--text-muted);">
+          Notice the 3D glossy shading (Apple) vs flat vector lines (Windows) vs Google Noto (Linux).
+        </div>
+      </article>
+
+      <!-- System Diagnostic -->
+      <article class="card">
+        <span class="card__tag card__tag--sys">Runtime Diagnostics</span>
+        <h2>Render Engine Details</h2>
+        <table class="metrics-table">
+          <tr><th>Platform:</th><td id="diag-platform">-</td></tr>
+          <tr><th>User Agent:</th><td id="diag-ua" style="word-break: break-all; font-size: 0.72rem;">-</td></tr>
+          <tr><th>Canvas Glyph Width:</th><td id="diag-metric">-</td></tr>
+        </table>
+      </article>
+    </div>
+  </main>
+
+  <script>
+    // System & Engine Detection
+    const ua = navigator.userAgent;
+    let os = "Linux";
+    if (ua.includes("Win")) os = "Windows";
+    else if (ua.includes("Mac")) os = "macOS";
+    else if (ua.includes("Linux")) os = "Linux";
+
+    let engine = "Chromium / Blink";
+    if (ua.includes("Firefox/")) engine = "Firefox / Gecko";
+    else if (ua.includes("Safari/") && !ua.includes("Chrome/") && !ua.includes("Chromium/")) engine = "Safari / WebKit";
+
+    document.getElementById("os-name").textContent = os;
+    document.getElementById("engine-name").textContent = engine;
+    document.getElementById("dpr-val").textContent = window.devicePixelRatio;
+
+    document.getElementById("diag-platform").textContent = navigator.platform;
+    document.getElementById("diag-ua").textContent = ua;
+
+    try {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      ctx.font = "24px system-ui";
+      const width = ctx.measureText("QWryzq-12345").width;
+      document.getElementById("diag-metric").textContent = width.toFixed(3) + " px";
+    } catch (e) {
+      document.getElementById("diag-metric").textContent = "N/A";
+    }
+  </script>
+</body>
+</html>
